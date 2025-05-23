@@ -1,10 +1,10 @@
-<div class="json-diff-container">
-  <div class="json-panel old">
+<div class="json-diff-container" [class.single-panel]="!oldJson || !newJson">
+  <div class="json-panel old" *ngIf="oldJson">
     <h3>Original JSON</h3>
     <pre class="line-numbers"><code><ng-container *ngFor="let line of oldJsonLines; let i = index"><div class="line" [class.changed]="line.changed" [attr.data-line]="i + 1" [ngClass]="line.type">{{ line.content }}</div></ng-container></code></pre>
   </div>
 
-  <div class="json-panel new">
+  <div class="json-panel new" *ngIf="newJson">
     <h3>Modified JSON</h3>
     <pre class="line-numbers"><code><ng-container *ngFor="let line of newJsonLines; let i = index"><div class="line" [class.changed]="line.changed" [attr.data-line]="i + 1" [ngClass]="line.type">{{ line.content }}</div></ng-container></code></pre>
   </div>

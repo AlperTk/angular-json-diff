@@ -100,4 +100,40 @@ describe('JsonDiffViewerComponent', () => {
     expect(modifiedLines.length).toBe(2); // One in each view
     expect(modifiedLines[0].textContent).toContain('email');
   });
+
+  it('should hide panel when JSON is null', () => {
+    component.oldJson = null;
+    component.newJson = '{"name": "Alice"}';
+    
+    component.ngOnChanges();
+    fixture.detectChanges();
+
+    const panels = fixture.nativeElement.querySelectorAll('.json-panel');
+    expect(panels.length).toBe(1);
+    expect(panels[0].classList.contains('new')).toBe(true);
+  });
+
+  it('should mark all lines as added when old JSON is empty', () => {
+    component.oldJson = '';
+    component.newJson = '{"name": "Alice", "age": 30}';
+    
+    component.ngOnChanges();
+    fixture.detectChanges();
+
+    const addedLines = fixture.nativeElement.querySelectorAll('.added');
+    expect(addedLines.length).toBe(4); // All lines should be marked as added
+    expect(fixture.nativeElement.querySelector('.json-panel.old')).toBeFalsy();
+  });
+
+  it('should mark all lines as removed when new JSON is empty', () => {
+    component.oldJson = '{"name": "Alice", "age": 30}';
+    component.newJson = '';
+    
+    component.ngOnChanges();
+    fixture.detectChanges();
+
+    const removedLines = fixture.nativeElement.querySelectorAll('.removed');
+    expect(removedLines.length).toBe(4); // All lines should be marked as removed
+    expect(fixture.nativeElement.querySelector('.json-panel.new')).toBeFalsy();
+  });
 });

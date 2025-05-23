@@ -12,6 +12,14 @@
   display: flex;
   gap: 2rem;
   padding: 1rem;
+
+  &.single-panel {
+    justify-content: center;
+    
+    .json-panel {
+      flex: 0 1 50%;  // Take up half the space when alone
+    }
+  }
 }
 
 .json-panel {

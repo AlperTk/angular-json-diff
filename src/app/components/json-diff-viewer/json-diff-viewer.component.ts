@@ -15,8 +15,8 @@ interface DiffDelta {
   styleUrls: ['./json-diff-viewer.component.scss']
 })
 export class JsonDiffViewerComponent implements OnChanges {
-  @Input() oldJson: string = '';
-  @Input() newJson: string = '';
+  @Input() oldJson: string | null = '';
+  @Input() newJson: string | null = '';
   
   oldJsonLines: { content: string; changed?: boolean; type?: string }[] = [];
   newJsonLines: { content: string; changed?: boolean; type?: string }[] = [];
@@ -53,6 +53,37 @@ export class JsonDiffViewerComponent implements OnChanges {
 
   ngOnChanges() {
     try {
+      // Handle cases where one of the JSONs is empty/null
+      if (!this.oldJson && this.newJson) {
+        const newObj = this.sortObject(JSON.parse(this.newJson));
+        const newFormatted = JSON.stringify(newObj, null, 2);
+        this.newJsonLines = newFormatted.split('\n').map(line => ({
+          content: line,
+          changed: true,
+          type: 'added'
+        }));
+        this.oldJsonLines = [];
+        return;
+      }
+
+      if (this.oldJson && !this.newJson) {
+        const oldObj = this.sortObject(JSON.parse(this.oldJson));
+        const oldFormatted = JSON.stringify(oldObj, null, 2);
+        this.oldJsonLines = oldFormatted.split('\n').map(line => ({
+          content: line,
+          changed: true,
+          type: 'removed'
+        }));
+        this.newJsonLines = [];
+        return;
+      }
+
+      // Regular diff logic for when both JSONs exist
+      if (!this.oldJson || !this.newJson) {
+        console.error('Both oldJson and newJson must be non-null for comparison');
+        return;
+      }
+
       const oldObj = this.sortObject(JSON.parse(this.oldJson));
       const newObj = this.sortObject(JSON.parse(this.newJson));
       
