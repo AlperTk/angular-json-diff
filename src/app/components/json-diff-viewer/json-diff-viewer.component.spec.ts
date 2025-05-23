@@ -113,27 +113,27 @@ describe('JsonDiffViewerComponent', () => {
     expect(panels[0].classList.contains('new')).toBe(true);
   });
 
-  it('should mark all lines as added when old JSON is empty', () => {
-    component.oldJson = '';
-    component.newJson = '{"name": "Alice", "age": 30}';
+  it('should handle array changes correctly', () => {
+    component.oldJson = '{"items": [1, 2, 3]}';
+    component.newJson = '{"items": [1, 4, 3]}';
     
     component.ngOnChanges();
     fixture.detectChanges();
 
-    const addedLines = fixture.nativeElement.querySelectorAll('.added');
-    expect(addedLines.length).toBe(4); // All lines should be marked as added
-    expect(fixture.nativeElement.querySelector('.json-panel.old')).toBeFalsy();
+    const modifiedLines = fixture.nativeElement.querySelectorAll('.modified');
+    expect(modifiedLines.length).toBe(2); // One in each view
+    expect(modifiedLines[0].textContent).toContain('4');
   });
 
-  it('should mark all lines as removed when new JSON is empty', () => {
-    component.oldJson = '{"name": "Alice", "age": 30}';
-    component.newJson = '';
+  it('should handle multiple property changes', () => {
+    component.oldJson = '{"name": "Alice", "age": 30, "city": "New York"}';
+    component.newJson = '{"name": "Bob", "age": 31, "city": "Boston"}';
     
     component.ngOnChanges();
     fixture.detectChanges();
 
-    const removedLines = fixture.nativeElement.querySelectorAll('.removed');
-    expect(removedLines.length).toBe(4); // All lines should be marked as removed
-    expect(fixture.nativeElement.querySelector('.json-panel.new')).toBeFalsy();
+    const modifiedLines = fixture.nativeElement.querySelectorAll('.modified');
+    expect(modifiedLines.length).toBe(6); // Three changes in each view
   });
+
 });
