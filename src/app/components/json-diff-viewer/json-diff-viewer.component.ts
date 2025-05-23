@@ -55,14 +55,12 @@ export class JsonDiffViewerComponent implements OnChanges {
   }
 
   private handleArrayChange(key: string, change: any[]) {
-    const oldLineIndex = this.findLineWithKey(this.oldJsonLines, key);
-    const newLineIndex = this.findLineWithKey(this.newJsonLines, key);
-
     if (change.length === 1) { // Added
-      if (newLineIndex >= 0) {
-        this.markLine(this.newJsonLines, newLineIndex, 'added');
-      }
+      this.markObjectLines(this.newJsonLines, key, change[0], 'added');
     } else if (change.length === 2) { // Modified
+      const oldLineIndex = this.findLineWithKey(this.oldJsonLines, key);
+      const newLineIndex = this.findLineWithKey(this.newJsonLines, key);
+      
       if (oldLineIndex >= 0) {
         this.markLine(this.oldJsonLines, oldLineIndex, 'modified');
       }
@@ -70,10 +68,45 @@ export class JsonDiffViewerComponent implements OnChanges {
         this.markLine(this.newJsonLines, newLineIndex, 'modified');
       }
     } else if (change.length === 3 && change[2] === 0) { // Removed
-      if (oldLineIndex >= 0) {
-        this.markLine(this.oldJsonLines, oldLineIndex, 'removed');
+      this.markObjectLines(this.oldJsonLines, key, change[0], 'removed');
+    }
+  }
+
+  private markObjectLines(lines: { content: string; changed?: boolean; type?: string }[], key: string, value: any, type: string) {
+    const startIndex = this.findLineWithKey(lines, key);
+    if (startIndex < 0) return;
+
+    // Mark the key line
+    this.markLine(lines, startIndex, type);
+
+    // If value is an object or array, mark all its lines
+    if (typeof value === 'object' && value !== null) {
+      const indentLevel = this.getIndentLevel(lines[startIndex].content);
+      let currentIndex = startIndex + 1;
+      let foundClosing = false;
+
+      while (currentIndex < lines.length && !foundClosing) {
+        const currentLine = lines[currentIndex].content;
+        const currentIndent = this.getIndentLevel(currentLine);
+
+        if (currentIndent <= indentLevel) {
+          // Check if this is the closing bracket for our object
+          if (this.isClosingBracket(currentLine)) {
+            this.markLine(lines, currentIndex, type);
+            foundClosing = true;
+          }
+          break;
+        }
+
+        this.markLine(lines, currentIndex, type);
+        currentIndex++;
       }
     }
+  }
+
+  private getIndentLevel(line: string): number {
+    const match = line.match(/^\s*/);
+    return match ? match[0].length : 0;
   }
 
   private markLine(lines: { content: string; changed?: boolean; type?: string }[], index: number, type: string) {
@@ -88,5 +121,10 @@ export class JsonDiffViewerComponent implements OnChanges {
       const trimmed = line.content.trim();
       return trimmed.includes(`"${currentPart}":`);
     });
+  }
+
+  private isClosingBracket(line: string): boolean {
+    const trimmed = line.trim();
+    return trimmed === '}' || trimmed === ']' || trimmed.endsWith('},') || trimmed.endsWith('],');
   }
 }
