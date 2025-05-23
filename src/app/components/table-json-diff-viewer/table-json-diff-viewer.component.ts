@@ -22,17 +22,28 @@ export class TableJsonDiffViewerComponent implements OnChanges {
 
   diffResults: DiffResult[] = [];
 
-  ngOnChanges() {
-    try {
-      const oldObj = JSON.parse(this.oldJson);
-      const newObj = JSON.parse(this.newJson);
-      this.generateDiffResults(oldObj, newObj);
-    } catch (e) {
-      console.error('Invalid JSON input:', e);
-    }
-  }
-
   private generateDiffResults(oldObj: any, newObj: any) {
+    // Handle complete object creation or deletion
+    if (!oldObj && newObj) {
+      this.diffResults = [{
+        path: 'root',
+        oldValue: undefined,
+        newValue: newObj,
+        type: 'added'
+      }];
+      return;
+    }
+    
+    if (oldObj && !newObj) {
+      this.diffResults = [{
+        path: 'root',
+        oldValue: oldObj,
+        newValue: undefined,
+        type: 'removed'
+      }];
+      return;
+    }
+
     const delta = jsondiffpatch.diff(oldObj, newObj);
     const results = this.flattenDiff(delta, oldObj, newObj);
     
@@ -41,6 +52,30 @@ export class TableJsonDiffViewerComponent implements OnChanges {
     
     // Sort results by path
     this.diffResults = results.sort((a, b) => a.path.localeCompare(b.path));
+  }
+
+  ngOnChanges() {
+    try {
+      let oldObj = null;
+      let newObj = null;
+      
+      try {
+        oldObj = this.oldJson ? JSON.parse(this.oldJson) : null;
+      } catch (e) {
+        console.warn('Invalid old JSON:', e);
+      }
+      
+      try {
+        newObj = this.newJson ? JSON.parse(this.newJson) : null;
+      } catch (e) {
+        console.warn('Invalid new JSON:', e);
+      }
+      
+      this.generateDiffResults(oldObj, newObj);
+    } catch (e) {
+      console.error('Error generating diff:', e);
+      this.diffResults = [];
+    }
   }
 
   private addUnchangedValues(oldObj: any, newObj: any, results: DiffResult[], parentPath: string = '') {

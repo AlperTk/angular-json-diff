@@ -12,10 +12,12 @@
       <tr *ngFor="let diff of diffResults" [ngClass]="diff.type">
         <td class="path-cell">{{ diff.path }}</td>
         <td class="value-cell" [ngClass]="{'removed': diff.type === 'removed'}">
-          <pre>{{ diff.oldValue | json }}</pre>
+          <pre *ngIf="diff.oldValue !== undefined">{{ diff.oldValue | json }}</pre>
+          <span *ngIf="diff.oldValue === undefined" class="empty-value">Empty</span>
         </td>
         <td class="value-cell" [ngClass]="{'added': diff.type === 'added'}">
-          <pre>{{ diff.newValue | json }}</pre>
+          <pre *ngIf="diff.newValue !== undefined">{{ diff.newValue | json }}</pre>
+          <span *ngIf="diff.newValue === undefined" class="empty-value">Empty</span>
         </td>
         <td class="type-cell">
           <span class="change-badge">{{ diff.type }}</span>
