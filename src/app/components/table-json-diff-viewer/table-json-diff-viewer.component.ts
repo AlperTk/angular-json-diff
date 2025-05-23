@@ -81,6 +81,20 @@ export class TableJsonDiffViewerComponent implements OnChanges {
   private addUnchangedValues(oldObj: any, newObj: any, results: DiffResult[], parentPath: string = '') {
     if (!oldObj || !newObj) return;
 
+    // Check if the entire object at this level is unchanged
+    if (this.isObjectUnchanged(oldObj, newObj)) {
+      // If this is not the root level, add as single unchanged entry
+      if (parentPath) {
+        results.push({
+          path: parentPath,
+          oldValue: oldObj,
+          newValue: newObj,
+          type: 'unchanged'
+        });
+        return; // Don't process children since we're showing the whole object
+      }
+    }
+
     Object.keys(oldObj).forEach(key => {
       const currentPath = parentPath ? `${parentPath}.${key}` : key;
       
@@ -89,7 +103,21 @@ export class TableJsonDiffViewerComponent implements OnChanges {
         const oldValue = oldObj[key];
         const newValue = newObj[key];
 
-        if (JSON.stringify(oldValue) === JSON.stringify(newValue)) {
+        if (typeof oldValue === 'object' && typeof newValue === 'object' && oldValue && newValue) {
+          // For objects, check if they're identical
+          if (this.isObjectUnchanged(oldValue, newValue)) {
+            results.push({
+              path: currentPath,
+              oldValue: oldValue,
+              newValue: newValue,
+              type: 'unchanged'
+            });
+          } else {
+            // If objects are different, recurse into them
+            this.addUnchangedValues(oldValue, newValue, results, currentPath);
+          }
+        } else if (JSON.stringify(oldValue) === JSON.stringify(newValue)) {
+          // For primitive values
           results.push({
             path: currentPath,
             oldValue: oldValue,
@@ -97,13 +125,38 @@ export class TableJsonDiffViewerComponent implements OnChanges {
             type: 'unchanged'
           });
         }
-
-        // Recursively check nested objects
-        if (oldValue && newValue && typeof oldValue === 'object' && typeof newValue === 'object') {
-          this.addUnchangedValues(oldValue, newValue, results, currentPath);
-        }
       }
     });
+  }
+
+  // Add this new helper method
+  private isObjectUnchanged(obj1: any, obj2: any): boolean {
+    if (obj1 === obj2) return true;
+    if (!obj1 || !obj2) return false;
+    if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return false;
+    
+    const keys1 = Object.keys(obj1);
+    const keys2 = Object.keys(obj2);
+    
+    if (keys1.length !== keys2.length) return false;
+    
+    return JSON.stringify(this.sortObject(obj1)) === JSON.stringify(this.sortObject(obj2));
+  }
+
+  // Add this helper method to ensure consistent object comparison
+  private sortObject(obj: any): any {
+    if (!obj || typeof obj !== 'object') return obj;
+    
+    if (Array.isArray(obj)) {
+      return obj.map(this.sortObject.bind(this)).sort();
+    }
+    
+    return Object.keys(obj)
+      .sort()
+      .reduce((result: any, key: string) => {
+        result[key] = this.sortObject(obj[key]);
+        return result;
+      }, {});
   }
 
   private flattenDiff(delta: any, oldObj: any, newObj: any, path: string = ''): DiffResult[] {
