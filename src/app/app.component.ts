@@ -12,18 +12,53 @@ import { JsonDiffViewerComponent } from './components/json-diff-viewer/json-diff
 export class AppComponent {
   title = 'my-angular-app';
 
-  json1 = `{
-    "name": "Alice",
-    "contact": {
-      "email": "alice@email.com",
-      "phone": {
-        "home": "123-456",
-        "mobile": "789-012"
-      }
+  json1 = `
+  {
+  "id": 101,
+  "name": "Alice",
+  "age": 30,
+  "email": "alice@example.com",
+  "address": {
+    "street": "123 Main St",
+    "city": "New York",
+    "zip": "10001"
+  },
+  "preferences": {
+    "newsletter": true,
+    "notifications": {
+      "email": true,
+      "sms": false
     }
-  }`;
+  },
+  "accountStatus": "active",
+  "createdAt": "2023-07-01T10:00:00Z"
+}
 
-  json2 = `{
-    "name": "Alice"
-  }`;
+  `;
+
+  json2 = `
+  {
+  "id": 101,
+  "name": "Alice Smith",
+  "age": 31,
+  "phone": "123-456-7890",
+  "address": {
+    "street": "456 Market St",
+    "city": "New York",
+    "state": "NY"
+  },
+  "preferences": {
+    "newsletter": false,
+    "notifications": {
+      "email": true,
+      "sms": true,
+      "push": true
+    },
+    "theme": "dark"
+  },
+  "accountStatus": "suspended",
+  "lastLogin": "2024-05-20T08:30:00Z"
+}
+
+  `;
 }
