@@ -21,10 +21,40 @@ export class JsonDiffViewerComponent implements OnChanges {
   oldJsonLines: { content: string; changed?: boolean; type?: string }[] = [];
   newJsonLines: { content: string; changed?: boolean; type?: string }[] = [];
 
+  private sortObject(obj: any): any {
+    // Handle null, undefined, and non-objects
+    if (obj === null || typeof obj !== 'object') {
+      return obj;
+    }
+
+    // Handle arrays by sorting their elements
+    if (Array.isArray(obj)) {
+      return obj
+        .map(item => this.sortObject(item))
+        .sort((a, b) => {
+          // Sort array elements if they are comparable
+          if (typeof a === 'string' && typeof b === 'string') {
+            return a.localeCompare(b);
+          }
+          return 0;
+        });
+    }
+
+    // Handle objects by sorting their keys
+    const sortedKeys = Object.keys(obj).sort((a, b) => a.localeCompare(b));
+    const result: { [key: string]: any } = {};
+    
+    for (const key of sortedKeys) {
+      result[key] = this.sortObject(obj[key]);
+    }
+
+    return result;
+  }
+
   ngOnChanges() {
     try {
-      const oldObj = JSON.parse(this.oldJson);
-      const newObj = JSON.parse(this.newJson);
+      const oldObj = this.sortObject(JSON.parse(this.oldJson));
+      const newObj = this.sortObject(JSON.parse(this.newJson));
       
       const oldFormatted = JSON.stringify(oldObj, null, 2);
       const newFormatted = JSON.stringify(newObj, null, 2);
