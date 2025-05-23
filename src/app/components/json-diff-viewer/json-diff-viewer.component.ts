@@ -104,9 +104,16 @@ export class JsonDiffViewerComponent implements OnChanges {
     }
   }
 
+  private memoizedIndentLevel = new Map<string, number>();
+
   private getIndentLevel(line: string): number {
+    if (this.memoizedIndentLevel.has(line)) {
+      return this.memoizedIndentLevel.get(line)!;
+    }
     const match = line.match(/^\s*/);
-    return match ? match[0].length : 0;
+    const result = match ? match[0].length : 0;
+    this.memoizedIndentLevel.set(line, result);
+    return result;
   }
 
   private markLine(lines: { content: string; changed?: boolean; type?: string }[], index: number, type: string) {

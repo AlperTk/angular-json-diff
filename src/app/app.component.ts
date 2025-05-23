@@ -12,8 +12,7 @@ import { JsonDiffViewerComponent } from './components/json-diff-viewer/json-diff
 export class AppComponent {
   title = 'my-angular-app';
 
-  json1 = `
-  {
+  json1 = `{
   "id": 101,
   "name": "Alice",
   "age": 30,
@@ -32,12 +31,9 @@ export class AppComponent {
   },
   "accountStatus": "active",
   "createdAt": "2023-07-01T10:00:00Z"
-}
+}`;
 
-  `;
-
-  json2 = `
-  {
+  json2 = `{
   "id": 101,
   "name": "Alice Smith",
   "age": 31,
@@ -58,7 +54,5 @@ export class AppComponent {
   },
   "accountStatus": "suspended",
   "lastLogin": "2024-05-20T08:30:00Z"
-}
-
-  `;
+}`;
 }
