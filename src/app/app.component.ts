@@ -16,12 +16,28 @@ export class AppComponent {
   json1 = `{
     "name": "Alice",
     "age": 30,
-    "city": "Paris"
+    "address": {
+      "street": "123 Main St",
+      "city": "Paris",
+      "country": "France"
+    },
+    "hobbies": {
+      "indoor": ["reading", "cooking"],
+      "outdoor": "hiking"
+    }
   }`;
 
   json2 = `{
     "name": "Alice",
     "age": 31,
-    "city": "London"
+    "address": {
+      "street": "456 New St",
+      "city": "London",
+      "country": "UK"
+    },
+    "hobbies": {
+      "indoor": ["reading", "painting"],
+      "outdoor": "running"
+    }
   }`;
 }
