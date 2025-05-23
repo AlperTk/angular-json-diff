@@ -1,0 +1,83 @@
+.json-diff-table-container {
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+
+.diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+  font-size: 13px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  
+  th, td {
+    padding: 0.75rem;
+    border: 1px solid #e0e0e0;
+    text-align: left;
+  }
+
+  th {
+    background: #f5f5f5;
+    font-weight: bold;
+  }
+
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .path-cell {
+    min-width: 150px;
+    font-weight: 500;
+  }
+
+  .value-cell {
+    min-width: 200px;
+    
+    &.removed {
+      background-color: #ffebee;
+    }
+    
+    &.added {
+      background-color: #e8f5e9;
+    }
+  }
+
+  .type-cell {
+    width: 100px;
+  }
+
+  .change-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    text-transform: capitalize;
+    font-size: 0.85em;
+    font-weight: 500;
+  }
+
+  tr {
+    &.added {
+      .change-badge {
+        background-color: #c8e6c9;
+        color: #2e7d32;
+      }
+    }
+
+    &.removed {
+      .change-badge {
+        background-color: #ffcdd2;
+        color: #c62828;
+      }
+    }
+
+    &.modified {
+      .change-badge {
+        background-color: #bbdefb;
+        color: #1565c0;
+      }
+    }
+  }
+}

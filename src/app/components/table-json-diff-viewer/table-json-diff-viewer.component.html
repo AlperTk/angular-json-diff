@@ -1,0 +1,26 @@
+<div class="json-diff-table-container">
+  <table class="diff-table">
+    <thead>
+      <tr>
+        <th>Path</th>
+        <th>Original Value</th>
+        <th>Modified Value</th>
+        <th>Change Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let diff of diffResults" [ngClass]="diff.type">
+        <td class="path-cell">{{ diff.path }}</td>
+        <td class="value-cell" [ngClass]="{'removed': diff.type === 'removed'}">
+          <pre>{{ diff.oldValue | json }}</pre>
+        </td>
+        <td class="value-cell" [ngClass]="{'added': diff.type === 'added'}">
+          <pre>{{ diff.newValue | json }}</pre>
+        </td>
+        <td class="type-cell">
+          <span class="change-badge">{{ diff.type }}</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

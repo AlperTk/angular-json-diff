@@ -13,9 +13,31 @@
     </div>
   </div>
 
-  <h3>Differences</h3>
-  <app-json-diff-viewer 
-    [oldJson]="json1"
-    [newJson]="json2">
-  </app-json-diff-viewer>
+  <div class="diff-viewer-tabs">
+    <button 
+      [class.active]="activeTab === 'line'"
+      (click)="activeTab = 'line'">
+      Line View
+    </button>
+    <button 
+      [class.active]="activeTab === 'table'"
+      (click)="activeTab = 'table'">
+      Table View
+    </button>
+  </div>
+
+  <div class="diff-viewer-content">
+    <div *ngIf="activeTab === 'line'">
+      <app-json-diff-viewer 
+        [oldJson]="json1"
+        [newJson]="json2">
+      </app-json-diff-viewer>
+    </div>
+    <div *ngIf="activeTab === 'table'">
+      <app-table-json-diff-viewer
+        [oldJson]="json1"
+        [newJson]="json2">
+      </app-table-json-diff-viewer>
+    </div>
+  </div>
 </div>
