@@ -23,32 +23,44 @@ export class TableJsonDiffViewerComponent implements OnChanges {
   diffResults: DiffResult[] = [];
 
   private generateDiffResults(oldObj: any, newObj: any) {
-    // Handle complete object creation or deletion
+    const results: DiffResult[] = [];
+
+    // Handle complete object creation
     if (!oldObj && newObj) {
-      this.diffResults = [{
-        path: 'root',
-        oldValue: undefined,
-        newValue: newObj,
-        type: 'added'
-      }];
+      Object.entries(newObj).forEach(([key, value]) => {
+        results.push({
+          path: key,
+          oldValue: undefined,
+          newValue: value,
+          type: 'added'
+        });
+      });
+      this.diffResults = results.sort((a, b) => a.path.localeCompare(b.path));
       return;
     }
     
+    // Handle complete object deletion
     if (oldObj && !newObj) {
-      this.diffResults = [{
-        path: 'root',
-        oldValue: oldObj,
-        newValue: undefined,
-        type: 'removed'
-      }];
+      Object.entries(oldObj).forEach(([key, value]) => {
+        results.push({
+          path: key,
+          oldValue: value,
+          newValue: undefined,
+          type: 'removed'
+        });
+      });
+      this.diffResults = results.sort((a, b) => a.path.localeCompare(b.path));
       return;
     }
 
     const delta = jsondiffpatch.diff(oldObj, newObj);
-    const results = this.flattenDiff(delta, oldObj, newObj);
+    const diffResults = this.flattenDiff(delta, oldObj, newObj);
     
     // Add unchanged values
     this.addUnchangedValues(oldObj, newObj, results);
+    
+    // Add the diff results to our results array
+    results.push(...diffResults);
     
     // Sort results by path
     this.diffResults = results.sort((a, b) => a.path.localeCompare(b.path));
