@@ -21,12 +21,16 @@ export class TableJsonDiffViewerComponent implements OnChanges {
   @Input() newJson: string = '';
 
   diffResults: DiffResult[] = [];
+  showOriginalColumn = true;
+  showModifiedColumn = true;
 
   private generateDiffResults(oldObj: any, newObj: any) {
     const results: DiffResult[] = [];
 
     // Handle complete object creation
     if (!oldObj && newObj) {
+      this.showOriginalColumn = false;
+      this.showModifiedColumn = true;
       Object.entries(newObj).forEach(([key, value]) => {
         results.push({
           path: key,
@@ -41,6 +45,8 @@ export class TableJsonDiffViewerComponent implements OnChanges {
     
     // Handle complete object deletion
     if (oldObj && !newObj) {
+      this.showOriginalColumn = true;
+      this.showModifiedColumn = false;
       Object.entries(oldObj).forEach(([key, value]) => {
         results.push({
           path: key,
@@ -53,6 +59,9 @@ export class TableJsonDiffViewerComponent implements OnChanges {
       return;
     }
 
+    // Both objects exist - show both columns
+    this.showOriginalColumn = true;
+    this.showModifiedColumn = true;
     const delta = jsondiffpatch.diff(oldObj, newObj);
     const diffResults = this.flattenDiff(delta, oldObj, newObj);
     

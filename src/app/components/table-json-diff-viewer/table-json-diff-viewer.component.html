@@ -3,22 +3,22 @@
     <thead>
       <tr>
         <th>Path</th>
-        <th>Original Value</th>
-        <th>Modified Value</th>
+        <th *ngIf="showOriginalColumn">Original Value</th>
+        <th *ngIf="showModifiedColumn">Modified Value</th>
         <th>Change Type</th>
       </tr>
     </thead>
     <tbody>
       <tr *ngFor="let diff of diffResults" [ngClass]="diff.type">
         <td class="path-cell">{{ diff.path }}</td>
-        <td class="value-cell" [ngClass]="{
+        <td *ngIf="showOriginalColumn" class="value-cell" [ngClass]="{
           'removed': diff.type === 'removed',
           'modified': diff.type === 'modified'
         }">
           <pre *ngIf="diff.oldValue !== undefined">{{ diff.oldValue | json }}</pre>
           <span *ngIf="diff.oldValue === undefined" class="empty-value">Empty</span>
         </td>
-        <td class="value-cell" [ngClass]="{
+        <td *ngIf="showModifiedColumn" class="value-cell" [ngClass]="{
           'added': diff.type === 'added',
           'modified': diff.type === 'modified'
         }">
