@@ -6,7 +6,7 @@ interface DiffResult {
   path: string;
   oldValue: any;
   newValue: any;
-  type: 'added' | 'removed' | 'modified';
+  type: 'added' | 'removed' | 'modified' | 'unchanged';
 }
 
 @Component({
@@ -34,7 +34,41 @@ export class TableJsonDiffViewerComponent implements OnChanges {
 
   private generateDiffResults(oldObj: any, newObj: any) {
     const delta = jsondiffpatch.diff(oldObj, newObj);
-    this.diffResults = this.flattenDiff(delta, oldObj, newObj);
+    const results = this.flattenDiff(delta, oldObj, newObj);
+    
+    // Add unchanged values
+    this.addUnchangedValues(oldObj, newObj, results);
+    
+    // Sort results by path
+    this.diffResults = results.sort((a, b) => a.path.localeCompare(b.path));
+  }
+
+  private addUnchangedValues(oldObj: any, newObj: any, results: DiffResult[], parentPath: string = '') {
+    if (!oldObj || !newObj) return;
+
+    Object.keys(oldObj).forEach(key => {
+      const currentPath = parentPath ? `${parentPath}.${key}` : key;
+      
+      // Skip if this path is already in results
+      if (!results.some(r => r.path === currentPath)) {
+        const oldValue = oldObj[key];
+        const newValue = newObj[key];
+
+        if (JSON.stringify(oldValue) === JSON.stringify(newValue)) {
+          results.push({
+            path: currentPath,
+            oldValue: oldValue,
+            newValue: newValue,
+            type: 'unchanged'
+          });
+        }
+
+        // Recursively check nested objects
+        if (oldValue && newValue && typeof oldValue === 'object' && typeof newValue === 'object') {
+          this.addUnchangedValues(oldValue, newValue, results, currentPath);
+        }
+      }
+    });
   }
 
   private flattenDiff(delta: any, oldObj: any, newObj: any, path: string = ''): DiffResult[] {
