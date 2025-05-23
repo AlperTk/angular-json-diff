@@ -1,0 +1,23 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.json-inputs {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.json-input {
+  flex: 1;
+  
+  textarea {
+    width: 100%;
+    padding: 1rem;
+    font-family: monospace;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+}

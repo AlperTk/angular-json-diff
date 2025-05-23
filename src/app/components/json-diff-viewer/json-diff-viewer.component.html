@@ -1,0 +1,16 @@
+<div class="diff-container">
+  <div *ngFor="let diff of differences" class="diff-line" [ngClass]="diff.status">
+    <span class="key">{{ diff.key }}:</span>
+    <ng-container [ngSwitch]="diff.status">
+      <span *ngSwitchCase="'added'" class="added">
+        Added: {{ diff.newValue }}
+      </span>
+      <span *ngSwitchCase="'removed'" class="removed">
+        Removed: {{ diff.oldValue }}
+      </span>
+      <span *ngSwitchCase="'modified'" class="modified">
+        Changed from "{{ diff.oldValue }}" to "{{ diff.newValue }}"
+      </span>
+    </ng-container>
+  </div>
+</div>
