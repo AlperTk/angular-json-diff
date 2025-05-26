@@ -158,4 +158,56 @@ describe('JsonDiffViewerComponent', () => {
     expect(newAddedLines.length).toBeGreaterThan(0);
   });
 
+  it('should detect changes in deeply nested arrays and objects', () => {
+    component.oldJson = '{"a": {"b": {"c": [1, 2, 3]}}}';
+    component.newJson = '{"a": {"b": {"c": [1, 4, 3]}}}';
+
+    component.ngOnChanges();
+    fixture.detectChanges();
+
+    const oldRemoved = Array.from<Element>(fixture.nativeElement.querySelectorAll('.removed'))
+      .filter(el => el.textContent && el.textContent.includes('2'));
+    const newAdded = Array.from<Element>(fixture.nativeElement.querySelectorAll('.added'))
+      .filter(el => el.textContent && el.textContent.includes('4'));
+
+    expect(oldRemoved.length).toBeGreaterThan(0);
+    expect(newAdded.length).toBeGreaterThan(0);
+  });
+
+  it('should detect type changes', () => {
+    component.oldJson = '{"value": 123}';
+    component.newJson = '{"value": "123"}';
+
+    component.ngOnChanges();
+    fixture.detectChanges();
+
+    const modifiedLines = fixture.nativeElement.querySelectorAll('.modified');
+    expect(modifiedLines.length).toBe(2); // One in each view
+    expect(modifiedLines[0].textContent).toContain('value');
+  });
+
+  it('should detect null to value changes', () => {
+    component.oldJson = '{"key": null}';
+    component.newJson = '{"key": "not null"}';
+
+    component.ngOnChanges();
+    fixture.detectChanges();
+
+    const modifiedLines = fixture.nativeElement.querySelectorAll('.modified');
+    expect(modifiedLines.length).toBe(2);
+    expect(modifiedLines[0].textContent).toContain('key');
+  });
+
+  it('should detect array item addition and removal', () => {
+    component.oldJson = '{"arr": [1, 2, 3]}';
+    component.newJson = '{"arr": [1, 2, 3, 4]}';
+
+    component.ngOnChanges();
+    fixture.detectChanges();
+
+    const addedLines = Array.from<Element>(fixture.nativeElement.querySelectorAll('.added'))
+      .filter(el => el.textContent && el.textContent.includes('4'));
+    expect(addedLines.length).toBeGreaterThan(0);
+  });
+
 });
