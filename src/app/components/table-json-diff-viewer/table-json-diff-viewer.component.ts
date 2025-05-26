@@ -7,6 +7,7 @@ interface DiffResult {
   oldValue: any;
   newValue: any;
   type: 'added' | 'removed' | 'modified' | 'unchanged';
+  children?: DiffResult[]; // Add children for nested diffs
 }
 
 @Component({
@@ -26,21 +27,16 @@ export class TableJsonDiffViewerComponent {
   expandedRows: Set<number> = new Set();
 
   private generateDiffResults(oldObj: any, newObj: any) {
-    const results: DiffResult[] = [];
-
     // Handle complete object creation
     if (!oldObj && newObj) {
       this.showOriginalColumn = false;
       this.showModifiedColumn = true;
-      Object.entries(newObj).forEach(([key, value]) => {
-        results.push({
-          path: key,
-          oldValue: undefined,
-          newValue: value,
-          type: 'added'
-        });
-      });
-      this.diffResults = results.sort((a, b) => a.path.localeCompare(b.path));
+      this.diffResults = Object.entries(newObj).map(([key, value]) => ({
+        path: key,
+        oldValue: undefined,
+        newValue: value,
+        type: 'added' as const
+      })).sort((a, b) => a.path.localeCompare(b.path));
       return;
     }
 
@@ -48,15 +44,12 @@ export class TableJsonDiffViewerComponent {
     if (oldObj && !newObj) {
       this.showOriginalColumn = true;
       this.showModifiedColumn = false;
-      Object.entries(oldObj).forEach(([key, value]) => {
-        results.push({
-          path: key,
-          oldValue: value,
-          newValue: undefined,
-          type: 'removed'
-        });
-      });
-      this.diffResults = results.sort((a, b) => a.path.localeCompare(b.path));
+      this.diffResults = Object.entries(oldObj).map(([key, value]) => ({
+        path: key,
+        oldValue: value,
+        newValue: undefined,
+        type: 'removed' as const
+      })).sort((a, b) => a.path.localeCompare(b.path));
       return;
     }
 
@@ -70,16 +63,85 @@ export class TableJsonDiffViewerComponent {
       }
     });
     const delta = diffpatcher.diff(oldObj, newObj);
-    const diffResults = this.flattenDiff(delta, oldObj, newObj);
+    this.diffResults = this.buildDiffTree(delta, oldObj, newObj);
+  }
 
-    // Add unchanged values
-    this.addUnchangedValues(oldObj, newObj, results);
-
-    // Add the diff results to our results array
-    results.push(...diffResults);
-
-    // Sort results by path
-    this.diffResults = results.sort((a, b) => a.path.localeCompare(b.path));
+  // Recursively build a nested diff tree, including unchanged, added, and removed fields
+  private buildDiffTree(delta: any, oldObj: any, newObj: any, path: string = ''): DiffResult[] {
+    // If both are objects, collect all keys
+    const allKeys = new Set<string>();
+    if (oldObj && typeof oldObj === 'object') {
+      Object.keys(oldObj).forEach(k => allKeys.add(k));
+    }
+    if (newObj && typeof newObj === 'object') {
+      Object.keys(newObj).forEach(k => allKeys.add(k));
+    }
+    // If delta is null, everything is unchanged
+    if (!delta) {
+      return Array.from(allKeys).map(key => {
+        const currentPath = path ? `${path}.${key}` : key;
+        return {
+          path: currentPath,
+          oldValue: oldObj ? oldObj[key] : undefined,
+          newValue: newObj ? newObj[key] : undefined,
+          type: 'unchanged'
+        };
+      });
+    }
+    const results: DiffResult[] = [];
+    allKeys.forEach(key => {
+      const currentPath = path ? `${path}.${key}` : key;
+      const change = delta[key];
+      const oldValue = oldObj ? oldObj[key] : undefined;
+      const newValue = newObj ? newObj[key] : undefined;
+      if (change === undefined) {
+        // Unchanged
+        results.push({
+          path: currentPath,
+          oldValue,
+          newValue,
+          type: 'unchanged'
+        });
+      } else if (Array.isArray(change)) {
+        if (change.length === 1) {
+          results.push({
+            path: currentPath,
+            oldValue: undefined,
+            newValue: change[0],
+            type: 'added'
+          });
+        } else if (change.length === 2) {
+          results.push({
+            path: currentPath,
+            oldValue: change[0],
+            newValue: change[1],
+            type: 'modified'
+          });
+        } else if (change.length === 3 && change[2] === 0) {
+          results.push({
+            path: currentPath,
+            oldValue: change[0],
+            newValue: undefined,
+            type: 'removed'
+          });
+        }
+      } else if (typeof change === 'object') {
+        // Recursively build children
+        results.push({
+          path: currentPath,
+          oldValue,
+          newValue,
+          type: 'modified',
+          children: this.buildDiffTree(
+            change,
+            oldValue,
+            newValue,
+            currentPath
+          )
+        });
+      }
+    });
+    return results;
   }
 
   ngOnChanges() {
@@ -186,52 +248,6 @@ export class TableJsonDiffViewerComponent {
         return result;
       }, {});
   }
-
-  private flattenDiff(delta: any, oldObj: any, newObj: any, path: string = ''): DiffResult[] {
-  if (!delta) return [];
-
-  const results: DiffResult[] = [];
-
-  // Regular object diff
-  Object.keys(delta).forEach(key => {
-    const currentPath = path ? `${path}.${key}` : key;
-    const change = delta[key];
-
-    if (Array.isArray(change)) {
-      if (change.length === 1) {
-        results.push({
-          path: currentPath,
-          oldValue: undefined,
-          newValue: change[0],
-          type: 'added'
-        });
-      } else if (change.length === 2) {
-        results.push({
-          path: currentPath,
-          oldValue: change[0],
-          newValue: change[1],
-          type: 'modified'
-        });
-      } else if (change.length === 3 && change[2] === 0) {
-        results.push({
-          path: currentPath,
-          oldValue: change[0],
-          newValue: undefined,
-          type: 'removed'
-        });
-      }
-    } else if (typeof change === 'object') {
-      results.push(...this.flattenDiff(
-        change,
-        oldObj ? this.getValueByPath(oldObj, currentPath) : undefined,
-        newObj ? this.getValueByPath(newObj, currentPath) : undefined,
-        currentPath
-      ));
-    }
-  });
-
-  return results;
-}
 
   private getValueByPath(obj: any, path: string): any {
     return path.split('.').reduce((current, key) => {
