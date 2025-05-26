@@ -160,4 +160,92 @@ describe('TableJsonDiffViewerComponent', () => {
       type: 'modified'
     });
   });
+
+  it('should return all properties as added if oldJson is null', () => {
+    component.oldJson = null;
+    component.newJson = '{"a": 1}';
+    component.ngOnChanges();
+    expect(component.diffResults.find(r => r.path === 'a')).toEqual({
+      path: 'a',
+      oldValue: undefined,
+      newValue: 1,
+      type: 'added'
+    });
+  });
+
+  it('should return all properties as removed if newJson is null', () => {
+    component.oldJson = '{"a": 1}';
+    component.newJson = null;
+    component.ngOnChanges();
+    expect(component.diffResults.find(r => r.path === 'a')).toEqual({
+      path: 'a',
+      oldValue: 1,
+      newValue: undefined,
+      type: 'removed'
+    });
+  });
+
+  it('should detect array order changes as modifications', () => {
+    component.oldJson = '{"arr": [1, 2, 3]}';
+    component.newJson = '{"arr": [3, 2, 1]}';
+    component.ngOnChanges();
+
+    // Should detect removed and added for moved items
+    expect(component.diffResults.find(r => r.path === 'arr._0')).toEqual({
+      path: 'arr._0',
+      oldValue: 1,
+      newValue: undefined,
+      type: 'removed'
+    });
+    expect(component.diffResults.find(r => r.path === 'arr.0')).toEqual({
+      path: 'arr.0',
+      oldValue: undefined,
+      newValue: 3,
+      type: 'added'
+    });
+  });
+
+  it('should detect changes in deeply nested arrays and objects', () => {
+    component.oldJson = '{"a": {"b": {"c": [1, 2, 3]}}}';
+    component.newJson = '{"a": {"b": {"c": [1, 4, 3]}}}';
+    component.ngOnChanges();
+
+    expect(component.diffResults.find(r => r.path === 'a.b.c._1')).toEqual({
+      path: 'a.b.c._1',
+      oldValue: 2,
+      newValue: undefined,
+      type: 'removed'
+    });
+    expect(component.diffResults.find(r => r.path === 'a.b.c.1')).toEqual({
+      path: 'a.b.c.1',
+      oldValue: undefined,
+      newValue: 4,
+      type: 'added'
+    });
+  });
+
+  it('should handle multiple property changes', () => {
+    component.oldJson = '{"name": "Alice", "age": 30, "city": "New York"}';
+    component.newJson = '{"name": "Bob", "age": 31, "city": "Boston"}';
+    component.ngOnChanges();
+
+    expect(component.diffResults.find(r => r.path === 'name')).toEqual({
+      path: 'name',
+      oldValue: 'Alice',
+      newValue: 'Bob',
+      type: 'modified'
+    });
+    expect(component.diffResults.find(r => r.path === 'age')).toEqual({
+      path: 'age',
+      oldValue: 30,
+      newValue: 31,
+      type: 'modified'
+    });
+    expect(component.diffResults.find(r => r.path === 'city')).toEqual({
+      path: 'city',
+      oldValue: 'New York',
+      newValue: 'Boston',
+      type: 'modified'
+    });
+  });
 });

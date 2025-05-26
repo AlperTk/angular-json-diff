@@ -16,9 +16,9 @@ interface DiffResult {
   templateUrl: './table-json-diff-viewer.component.html',
   styleUrls: ['./table-json-diff-viewer.component.scss']
 })
-export class TableJsonDiffViewerComponent implements OnChanges {
-  @Input() oldJson: string = '';
-  @Input() newJson: string = '';
+export class TableJsonDiffViewerComponent {
+  @Input() oldJson: string | null = '';
+  @Input() newJson: string | null = '';
 
   diffResults: DiffResult[] = [];
   showOriginalColumn = true;

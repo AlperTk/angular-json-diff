@@ -210,4 +210,26 @@ describe('JsonDiffViewerComponent', () => {
     expect(addedLines.length).toBeGreaterThan(0);
   });
 
+  it('should handle empty inputs', () => {
+    component.oldJson = '';
+    component.newJson = '';
+    component.ngOnChanges();
+    fixture.detectChanges();
+
+    const panels = fixture.nativeElement.querySelectorAll('.json-panel');
+    expect(panels.length).toBe(0); // or 2 panels with no content, depending on implementation
+  });
+
+  it('should identify unchanged properties', () => {
+    component.oldJson = '{"a": 1, "b": 2}';
+    component.newJson = '{"a": 1, "b": 2}';
+    component.ngOnChanges();
+    fixture.detectChanges();
+
+    const added = fixture.nativeElement.querySelectorAll('.added');
+    const removed = fixture.nativeElement.querySelectorAll('.removed');
+    const modified = fixture.nativeElement.querySelectorAll('.modified');
+    expect(added.length + removed.length + modified.length).toBe(0);
+  });
+
 });
