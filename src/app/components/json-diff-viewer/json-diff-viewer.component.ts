@@ -185,6 +185,30 @@ export class JsonDiffViewerComponent implements OnChanges {
   private findLineWithKey(lines: { content: string }[], key: string): number {
     const parts = key.split('.');
     let currentPart = parts[parts.length - 1];
+
+    // If currentPart is a number, treat as array index
+    if (!isNaN(Number(currentPart))) {
+      // Find the parent array start
+      const parentKey = parts.slice(0, -1).join('.');
+      const parentIdx = parentKey
+        ? this.findLineWithKey(lines, parentKey)
+        : -1;
+      let arrayIdx = -1;
+      for (let i = parentIdx + 1; i < lines.length; i++) {
+        const trimmed = lines[i].content.trim();
+        if (trimmed === ']' || trimmed === '],') break;
+        // Only count lines that are likely array values (not brackets)
+        if (trimmed !== '[' && trimmed !== ']' && trimmed !== '],') {
+          arrayIdx++;
+          if (arrayIdx === Number(currentPart)) {
+            return i;
+          }
+        }
+      }
+      return -1;
+    }
+
+    // Default: look for object key
     return lines.findIndex(line => {
       const trimmed = line.content.trim();
       return trimmed.includes(`"${currentPart}":`);
