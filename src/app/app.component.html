@@ -36,7 +36,8 @@
     <div *ngIf="activeTab === 'table'">
       <app-table-json-diff-viewer
         [oldJson]="json1"
-        [newJson]="json2">
+        [newJson]="json2"
+        [autoExpand]="true">
       </app-table-json-diff-viewer>
     </div>
   </div>

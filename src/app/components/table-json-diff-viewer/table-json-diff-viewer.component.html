@@ -54,7 +54,8 @@
           <td colspan="4" class="expanded-cell">
             <app-table-json-diff-viewer
               [oldJson]="getSubJson(diff.oldValue)"
-              [newJson]="getSubJson(diff.newValue)">
+              [newJson]="getSubJson(diff.newValue)"
+              [autoExpand]="autoExpand">
             </app-table-json-diff-viewer>
           </td>
         </tr>

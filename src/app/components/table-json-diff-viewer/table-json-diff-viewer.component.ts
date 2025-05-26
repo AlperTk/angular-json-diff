@@ -20,6 +20,7 @@ interface DiffResult {
 export class TableJsonDiffViewerComponent {
   @Input() oldJson: string | null = '';
   @Input() newJson: string | null = '';
+  @Input() autoExpand: boolean = false; // Add autoExpand input
 
   diffResults: DiffResult[] = [];
   showOriginalColumn = true;
@@ -162,6 +163,15 @@ export class TableJsonDiffViewerComponent {
       }
 
       this.generateDiffResults(oldObj, newObj);
+      // Auto-expand all expandable rows if autoExpand is true
+      if (this.autoExpand) {
+        this.expandedRows.clear();
+        this.diffResults.forEach((diff, i) => {
+          if (this.isExpandable(diff)) {
+            this.expandedRows.add(i);
+          }
+        });
+      }
     } catch (e) {
       console.error('Error generating diff:', e);
       this.diffResults = [];
