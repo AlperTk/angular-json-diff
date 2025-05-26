@@ -42,7 +42,7 @@ export class TableJsonDiffViewerComponent {
       this.diffResults = results.sort((a, b) => a.path.localeCompare(b.path));
       return;
     }
-    
+
     // Handle complete object deletion
     if (oldObj && !newObj) {
       this.showOriginalColumn = true;
@@ -62,15 +62,21 @@ export class TableJsonDiffViewerComponent {
     // Both objects exist - show both columns
     this.showOriginalColumn = true;
     this.showModifiedColumn = true;
-    const delta = jsondiffpatch.diff(oldObj, newObj);
+
+    const diffpatcher = jsondiffpatch.create({
+      arrays: {
+        detectMove: false // treat order changes as modifications
+      }
+    });
+    const delta = diffpatcher.diff(oldObj, newObj);
     const diffResults = this.flattenDiff(delta, oldObj, newObj);
-    
+
     // Add unchanged values
     this.addUnchangedValues(oldObj, newObj, results);
-    
+
     // Add the diff results to our results array
     results.push(...diffResults);
-    
+
     // Sort results by path
     this.diffResults = results.sort((a, b) => a.path.localeCompare(b.path));
   }
@@ -79,19 +85,19 @@ export class TableJsonDiffViewerComponent {
     try {
       let oldObj = null;
       let newObj = null;
-      
+
       try {
         oldObj = this.oldJson ? JSON.parse(this.oldJson) : null;
       } catch (e) {
         console.warn('Invalid old JSON:', e);
       }
-      
+
       try {
         newObj = this.newJson ? JSON.parse(this.newJson) : null;
       } catch (e) {
         console.warn('Invalid new JSON:', e);
       }
-      
+
       this.generateDiffResults(oldObj, newObj);
     } catch (e) {
       console.error('Error generating diff:', e);
@@ -118,7 +124,7 @@ export class TableJsonDiffViewerComponent {
 
     Object.keys(oldObj).forEach(key => {
       const currentPath = parentPath ? `${parentPath}.${key}` : key;
-      
+
       // Skip if this path is already in results
       if (!results.some(r => r.path === currentPath)) {
         const oldValue = oldObj[key];
@@ -155,23 +161,23 @@ export class TableJsonDiffViewerComponent {
     if (obj1 === obj2) return true;
     if (!obj1 || !obj2) return false;
     if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return false;
-    
+
     const keys1 = Object.keys(obj1);
     const keys2 = Object.keys(obj2);
-    
+
     if (keys1.length !== keys2.length) return false;
-    
+
     return JSON.stringify(this.sortObject(obj1)) === JSON.stringify(this.sortObject(obj2));
   }
 
   // Add this helper method to ensure consistent object comparison
   private sortObject(obj: any): any {
     if (!obj || typeof obj !== 'object') return obj;
-    
+
     if (Array.isArray(obj)) {
       return obj.map(this.sortObject.bind(this)).sort();
     }
-    
+
     return Object.keys(obj)
       .sort()
       .reduce((result: any, key: string) => {
@@ -181,49 +187,50 @@ export class TableJsonDiffViewerComponent {
   }
 
   private flattenDiff(delta: any, oldObj: any, newObj: any, path: string = ''): DiffResult[] {
-    if (!delta) return [];
+  if (!delta) return [];
 
-    const results: DiffResult[] = [];
+  const results: DiffResult[] = [];
 
-    Object.keys(delta).forEach(key => {
-      const currentPath = path ? `${path}.${key}` : key;
-      const change = delta[key];
+  // Regular object diff
+  Object.keys(delta).forEach(key => {
+    const currentPath = path ? `${path}.${key}` : key;
+    const change = delta[key];
 
-      if (Array.isArray(change)) {
-        if (change.length === 1) {
-          results.push({
-            path: currentPath,
-            oldValue: undefined,
-            newValue: change[0],
-            type: 'added'
-          });
-        } else if (change.length === 2) {
-          results.push({
-            path: currentPath,
-            oldValue: change[0],
-            newValue: change[1],
-            type: 'modified'
-          });
-        } else if (change.length === 3 && change[2] === 0) {
-          results.push({
-            path: currentPath,
-            oldValue: change[0],
-            newValue: undefined,
-            type: 'removed'
-          });
-        }
-      } else if (typeof change === 'object') {
-        results.push(...this.flattenDiff(
-          change,
-          oldObj ? this.getValueByPath(oldObj, currentPath) : undefined,
-          newObj ? this.getValueByPath(newObj, currentPath) : undefined,
-          currentPath
-        ));
+    if (Array.isArray(change)) {
+      if (change.length === 1) {
+        results.push({
+          path: currentPath,
+          oldValue: undefined,
+          newValue: change[0],
+          type: 'added'
+        });
+      } else if (change.length === 2) {
+        results.push({
+          path: currentPath,
+          oldValue: change[0],
+          newValue: change[1],
+          type: 'modified'
+        });
+      } else if (change.length === 3 && change[2] === 0) {
+        results.push({
+          path: currentPath,
+          oldValue: change[0],
+          newValue: undefined,
+          type: 'removed'
+        });
       }
-    });
+    } else if (typeof change === 'object') {
+      results.push(...this.flattenDiff(
+        change,
+        oldObj ? this.getValueByPath(oldObj, currentPath) : undefined,
+        newObj ? this.getValueByPath(newObj, currentPath) : undefined,
+        currentPath
+      ));
+    }
+  });
 
-    return results;
-  }
+  return results;
+}
 
   private getValueByPath(obj: any, path: string): any {
     return path.split('.').reduce((current, key) => {
