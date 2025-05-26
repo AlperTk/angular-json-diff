@@ -12,7 +12,7 @@
       <ng-container *ngFor="let diff of diffResults; let i = index">
         <tr [ngClass]="diff.type">
           <td class="path-cell">
-            <span *ngIf="isExpandable(diff)" (click)="toggleExpand(i)" class="expand-toggle">
+            <span *ngIf="isExpandable(diff)" (click)="toggleExpand(i)" class="expand-toggle" style="cursor:pointer; user-select:none;">
               <span *ngIf="!isExpanded(i)">▶</span>
               <span *ngIf="isExpanded(i)">▼</span>
             </span>
