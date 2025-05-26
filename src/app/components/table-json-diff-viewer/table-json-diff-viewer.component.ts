@@ -23,6 +23,7 @@ export class TableJsonDiffViewerComponent {
   diffResults: DiffResult[] = [];
   showOriginalColumn = true;
   showModifiedColumn = true;
+  expandedRows: Set<number> = new Set();
 
   private generateDiffResults(oldObj: any, newObj: any) {
     const results: DiffResult[] = [];
@@ -236,5 +237,34 @@ export class TableJsonDiffViewerComponent {
     return path.split('.').reduce((current, key) => {
       return current ? current[key] : undefined;
     }, obj);
+  }
+
+  isExpandable(diff: DiffResult): boolean {
+    return this.isExpandableValue(diff.oldValue) || this.isExpandableValue(diff.newValue);
+  }
+
+  isExpandableValue(val: any): boolean {
+    return val && typeof val === 'object' && (Array.isArray(val) ? val.length > 0 : Object.keys(val).length > 0);
+  }
+
+  toggleExpand(index: number) {
+    if (this.expandedRows.has(index)) {
+      this.expandedRows.delete(index);
+    } else {
+      this.expandedRows.add(index);
+    }
+  }
+
+  isExpanded(index: number): boolean {
+    return this.expandedRows.has(index);
+  }
+
+  getSubJson(val: any): string | null {
+    if (!this.isExpandableValue(val)) return null;
+    try {
+      return JSON.stringify(val);
+    } catch {
+      return null;
+    }
   }
 }
