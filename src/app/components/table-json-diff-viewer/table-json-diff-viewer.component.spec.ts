@@ -93,4 +93,71 @@ describe('TableJsonDiffViewerComponent', () => {
       type: 'modified'
     });
   });
+
+  it('should detect changes inside arrays', () => {
+    component.oldJson = '{"arr": [1, 2, 3]}';
+    component.newJson = '{"arr": [1, 4, 3]}';
+    component.ngOnChanges();
+
+    expect(component.diffResults.find(r => r.path === 'arr._1' && r.type === 'removed')).toEqual({
+      path: 'arr._1',
+      oldValue: 2,
+      newValue: undefined,
+      type: 'removed'
+    });
+    expect(component.diffResults.find(r => r.path === 'arr.1' && r.type === 'added')).toEqual({
+      path: 'arr.1',
+      oldValue: undefined,
+      newValue: 4,
+      type: 'added'
+    });
+  });
+
+  it('should detect added array items', () => {
+    component.oldJson = '{"arr": [1, 2]}';
+    component.newJson = '{"arr": [1, 2, 3]}';
+    component.ngOnChanges();
+    expect(component.diffResults.find(r => r.path === 'arr.2')).toEqual({
+      path: 'arr.2',
+      oldValue: undefined,
+      newValue: 3,
+      type: 'added'
+    });
+  });
+
+  it('should detect removed array items', () => {
+    component.oldJson = '{"arr": [1, 2, 3]}';
+    component.newJson = '{"arr": [1, 2]}';
+    component.ngOnChanges();
+    expect(component.diffResults.find(r => r.path === 'arr._2')).toEqual({
+      path: 'arr._2',
+      oldValue: 3,
+      newValue: undefined,
+      type: 'removed'
+    });
+  });
+
+  it('should detect type changes', () => {
+    component.oldJson = '{"value": 123}';
+    component.newJson = '{"value": "123"}';
+    component.ngOnChanges();
+    expect(component.diffResults.find(r => r.path === 'value')).toEqual({
+      path: 'value',
+      oldValue: 123,
+      newValue: "123",
+      type: 'modified'
+    });
+  });
+
+  it('should detect null to value changes', () => {
+    component.oldJson = '{"key": null}';
+    component.newJson = '{"key": "not null"}';
+    component.ngOnChanges();
+    expect(component.diffResults.find(r => r.path === 'key')).toEqual({
+      path: 'key',
+      oldValue: null,
+      newValue: "not null",
+      type: 'modified'
+    });
+  });
 });
