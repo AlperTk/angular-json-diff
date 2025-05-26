@@ -22,29 +22,19 @@
             'removed': diff.type === 'removed',
             'modified': diff.type === 'modified'
           }">
-            <ng-container *ngIf="diff.oldValue !== undefined">
-              <ng-container *ngIf="isExpandableValue(diff.oldValue); else simpleOld">
-                <span class="expandable-label">Object/List</span>
-              </ng-container>
-              <ng-template #simpleOld>
-                <pre>{{ diff.oldValue | json }}</pre>
-              </ng-template>
+            <ng-container *ngIf="diff.oldValue !== undefined && !isExpandableValue(diff.oldValue)">
+              <pre>{{ diff.oldValue | json }}</pre>
             </ng-container>
-            <span *ngIf="diff.oldValue === undefined" class="empty-value">Empty</span>
+            <span *ngIf="diff.oldValue === undefined || isExpandableValue(diff.oldValue) && !isExpandableValue(diff.newValue)" class="empty-value">Empty</span>
           </td>
           <td *ngIf="showModifiedColumn" class="value-cell" [ngClass]="{
             'added': diff.type === 'added',
             'modified': diff.type === 'modified'
           }">
-            <ng-container *ngIf="diff.newValue !== undefined">
-              <ng-container *ngIf="isExpandableValue(diff.newValue); else simpleNew">
-                <span class="expandable-label">Object/List</span>
-              </ng-container>
-              <ng-template #simpleNew>
-                <pre>{{ diff.newValue | json }}</pre>
-              </ng-template>
+            <ng-container *ngIf="diff.newValue !== undefined && !isExpandableValue(diff.newValue)">
+              <pre>{{ diff.newValue | json }}</pre>
             </ng-container>
-            <span *ngIf="diff.newValue === undefined" class="empty-value">Empty</span>
+            <span *ngIf="diff.newValue === undefined || isExpandableValue(diff.newValue) && !isExpandableValue(diff.newValue)" class="empty-value">Empty</span>
           </td>
           <td class="type-cell">
             <span class="change-badge">{{ diff.type }}</span>
