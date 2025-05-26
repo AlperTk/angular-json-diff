@@ -27,20 +27,12 @@ export class JsonDiffViewerComponent implements OnChanges {
       return obj;
     }
 
-    // Handle arrays by sorting their elements
+    // Do NOT sort arrays, just recursively sort their items
     if (Array.isArray(obj)) {
-      return obj
-        .map(item => this.sortObject(item))
-        .sort((a, b) => {
-          // Sort array elements if they are comparable
-          if (typeof a === 'string' && typeof b === 'string') {
-            return a.localeCompare(b);
-          }
-          return 0;
-        });
+      return obj.map(item => this.sortObject(item));
     }
 
-    // Handle objects by sorting their keys
+    // Sort object keys
     const sortedKeys = Object.keys(obj).sort((a, b) => a.localeCompare(b));
     const result: { [key: string]: any } = {};
     
@@ -86,14 +78,20 @@ export class JsonDiffViewerComponent implements OnChanges {
 
       const oldObj = this.sortObject(JSON.parse(this.oldJson));
       const newObj = this.sortObject(JSON.parse(this.newJson));
-      
+
       const oldFormatted = JSON.stringify(oldObj, null, 2);
       const newFormatted = JSON.stringify(newObj, null, 2);
-      
+
       this.oldJsonLines = oldFormatted.split('\n').map(line => ({ content: line }));
       this.newJsonLines = newFormatted.split('\n').map(line => ({ content: line }));
-      
-      const delta = jsondiffpatch.diff(oldObj, newObj) as DiffDelta;
+
+      // Use custom diffpatcher to detect array order changes
+      const diffpatcher = jsondiffpatch.create({
+        arrays: {
+          detectMove: false // treat order changes as modifications
+        }
+      });
+      const delta = diffpatcher.diff(oldObj, newObj) as DiffDelta;
       this.markChangedLines(delta);
     } catch (e) {
       console.error('Invalid JSON input:', e);

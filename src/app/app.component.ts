@@ -21,7 +21,7 @@ export class AppComponent {
 
   json1 = `{"items": [1, 2, 3]}`;
 
-  json2 = `{"items": [1, 2, 4]}`;
+  json2 = `{"items": [1, 3, 2]}`;
 
   activeTab: 'line' | 'table' = 'line';
 }
