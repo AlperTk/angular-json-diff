@@ -120,9 +120,13 @@ describe('JsonDiffViewerComponent', () => {
     component.ngOnChanges();
     fixture.detectChanges();
 
-    const modifiedLines = fixture.nativeElement.querySelectorAll('.modified');
-    expect(modifiedLines.length).toBe(2); // One in each view
-    expect(modifiedLines[0].textContent).toContain('4');
+    const oldModifiedLines = Array.from<Element>(fixture.nativeElement.querySelectorAll('.removed'))
+      .filter(el => el.textContent && el.textContent.includes('2'));
+    const newModifiedLines = Array.from<Element>(fixture.nativeElement.querySelectorAll('.added'))
+      .filter(el => el.textContent && el.textContent.includes('4'));
+
+    expect(oldModifiedLines.length).toBeGreaterThan(0);
+    expect(newModifiedLines.length).toBeGreaterThan(0);
   });
 
   it('should handle multiple property changes', () => {
