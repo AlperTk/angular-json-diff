@@ -140,4 +140,22 @@ describe('JsonDiffViewerComponent', () => {
     expect(modifiedLines.length).toBe(6); // Three changes in each view
   });
 
+  it('should highlight array order changes as modifications', () => {
+    component.oldJson = '{"items": [1, 2, 3]}';
+    component.newJson = '{"items": [3, 2, 1]}';
+
+    component.ngOnChanges();
+    fixture.detectChanges();
+
+    // Look for 'removed' and 'added' lines for the moved elements
+    const oldRemovedLines = Array.from<Element>(fixture.nativeElement.querySelectorAll('.removed'))
+      .filter(el => el.textContent && (el.textContent.includes('1') || el.textContent.includes('3')));
+    const newAddedLines = Array.from<Element>(fixture.nativeElement.querySelectorAll('.added'))
+      .filter(el => el.textContent && (el.textContent.includes('1') || el.textContent.includes('3')));
+
+    // At least one of the moved numbers should be highlighted as changed in both views
+    expect(oldRemovedLines.length).toBeGreaterThan(0);
+    expect(newAddedLines.length).toBeGreaterThan(0);
+  });
+
 });
