@@ -70,8 +70,25 @@ export class TableJsonDiffViewerComponent {
       }
     });
     const delta = diffpatcher.diff(oldObj, newObj);
-    this.diffResults = this.buildDiffTree(delta, oldObj, newObj);
+   
+
+    const cleanedDelta = this.replaceUnderscoreKeys(delta);
+
+    this.diffResults = this.buildDiffTree(cleanedDelta, oldObj, newObj);
   }
+
+   replaceUnderscoreKeys = (obj: any): any => {
+      if (Array.isArray(obj)) {
+        return obj.map(this.replaceUnderscoreKeys);
+      } else if (obj && typeof obj === 'object') {
+        return Object.entries(obj).reduce((acc, [key, value]) => {
+          const newKey = key.replace(/_/g, '');
+          acc[newKey] = this.replaceUnderscoreKeys(value);
+          return acc;
+        }, {} as any);
+      }
+      return obj;
+    };
 
   // Recursively build a nested diff tree, including unchanged, added, and removed fields
   private buildDiffTree(delta: any, oldObj: any, newObj: any, path: string = ''): DiffResult[] {
