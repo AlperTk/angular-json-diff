@@ -24,6 +24,7 @@
 
 .json-panel {
   flex: 1;
+  max-width: 50%; // Limit each panel to 50% width
   
   pre {
     margin: 0;
@@ -32,10 +33,12 @@
     border-radius: 4px;
     position: relative;
     white-space: pre;   // Preserve whitespace but allow wrapping
+    overflow-x: auto;   // Enable horizontal scroll
+    max-width: 100%;    // Prevent overflow beyond panel
     
     code {
       font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
-      font-size: 13px;    // Slightly reduced font size
+      font-size: 12px;    // Slightly reduced font size
       line-height: 1.2;   // Matching line height
       white-space: pre;   // Preserve whitespace but allow wrapping
     }
