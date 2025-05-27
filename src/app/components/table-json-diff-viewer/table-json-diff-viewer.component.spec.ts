@@ -104,17 +104,11 @@ describe('TableJsonDiffViewerComponent', () => {
     const arrDiff = component.diffResults.find(r => r.path === 'arr');
     expect(arrDiff).toBeDefined();
     expect(Array.isArray(arrDiff?.children)).toBeTrue();
-    expect(arrDiff?.children?.find(r => r.path === 'arr.1' && r.type === 'removed')).toEqual({
+    expect(arrDiff?.children?.find(r => r.path === 'arr.1' && r.type === 'modified')).toEqual({
       path: 'arr.1',
       oldValue: 2,
-      newValue: undefined,
-      type: 'removed'
-    });
-    expect(arrDiff?.children?.find(r => r.path === 'arr.1' && r.type === 'added')).toEqual({
-      path: 'arr.1',
-      oldValue: undefined,
       newValue: 4,
-      type: 'added'
+      type: 'modified'
     });
   });
 
@@ -201,17 +195,20 @@ describe('TableJsonDiffViewerComponent', () => {
     component.newJson = '{"arr": [3, 2, 1]}';
     component.ngOnChanges();
     // Should detect removed and added for moved items
-    expect(component.diffResults.find(r => r.path === 'arr.0')).toEqual({
+    const arrDiff = component.diffResults.find(r => r.path === 'arr');
+    expect(arrDiff).toBeDefined();
+    expect(Array.isArray(arrDiff?.children)).toBeTrue();
+    expect(arrDiff?.children?.find(r => r.path === 'arr.0')).toEqual({
       path: 'arr.0',
       oldValue: 1,
-      newValue: undefined,
-      type: 'removed'
-    });
-    expect(component.diffResults.find(r => r.path === 'arr.0')).toEqual({
-      path: 'arr.0',
-      oldValue: undefined,
       newValue: 3,
-      type: 'added'
+      type: 'modified'
+    });
+    expect(arrDiff?.children?.find(r => r.path === 'arr.2')).toEqual({
+      path: 'arr.2',
+      oldValue: 3,
+      newValue: 1,
+      type: 'modified'
     });
   });
 
@@ -226,17 +223,11 @@ describe('TableJsonDiffViewerComponent', () => {
     const cDiff = bDiff?.children?.find(r => r.path === 'a.b.c');
     expect(cDiff).toBeDefined();
     expect(Array.isArray(cDiff?.children)).toBeTrue();
-    expect(cDiff?.children?.find(r => r.path === 'a.b.c.1' && r.type === 'removed')).toEqual({
+    expect(cDiff?.children?.find(r => r.path === 'a.b.c.1' && r.type === 'modified')).toEqual({
       path: 'a.b.c.1',
       oldValue: 2,
-      newValue: undefined,
-      type: 'removed'
-    });
-    expect(cDiff?.children?.find(r => r.path === 'a.b.c.1' && r.type === 'added')).toEqual({
-      path: 'a.b.c.1',
-      oldValue: undefined,
       newValue: 4,
-      type: 'added'
+      type: 'modified'
     });
   });
 

@@ -72,8 +72,7 @@ export class TableJsonDiffViewerComponent {
     const delta = diffpatcher.diff(oldObj, newObj);
    
 
-    const cleanedDelta = this.replaceUnderscoreKeys(delta);
-
+    const cleanedDelta = delta
     this.diffResults = this.buildDiffTree(cleanedDelta, oldObj, newObj);
   }
 
@@ -89,6 +88,66 @@ export class TableJsonDiffViewerComponent {
       }
       return obj;
     };
+
+  /**
+   * Processes a single diff key and pushes the result to the results array.
+   */
+  private processDiffKey(
+    key: string,
+    delta: any,
+    oldObj: any,
+    newObj: any,
+    path: string,
+    results: DiffResult[]
+  ) {
+    const currentPath = path ? `${path}.${key}` : key;
+    const change = delta[key]??delta["_"+key];
+    const oldValue = oldObj ? oldObj[key] : undefined;
+    const newValue = newObj ? newObj[key] : undefined;
+
+    if (change === undefined) {
+      // Unchanged
+      results.push({
+        path: currentPath,
+        oldValue,
+        newValue,
+        type: 'unchanged'
+      });
+    } else if (Array.isArray(change)) {
+        results.push({
+          path: currentPath,
+          oldValue: oldValue,
+          newValue: newValue,
+          type: this.getChangeType(oldValue, newValue)
+        });
+    } else if (typeof change === 'object') {
+      // Recursively build children
+      results.push({
+        path: currentPath,
+        oldValue,
+        newValue,
+        type: 'modified',
+        children: this.buildDiffTree(
+          change,
+          oldValue,
+          newValue,
+          currentPath
+        )
+      });
+    }
+  }
+
+  private getChangeType(oldValue: any, newValue: any): 'added' | 'removed' | 'modified' | 'unchanged' {
+    if (oldValue === undefined && newValue !== undefined) {
+      return 'added';
+    } else if (oldValue !== undefined && newValue === undefined) {
+      return 'removed';
+    } else if (oldValue !== newValue) {
+      return 'modified';
+    } else {
+      return 'unchanged';
+    }
+  }
 
   // Recursively build a nested diff tree, including unchanged, added, and removed fields
   private buildDiffTree(delta: any, oldObj: any, newObj: any, path: string = ''): DiffResult[] {
@@ -114,56 +173,7 @@ export class TableJsonDiffViewerComponent {
     }
     const results: DiffResult[] = [];
     allKeys.forEach(key => {
-      const currentPath = path ? `${path}.${key}` : key;
-      const change = delta[key];
-      const oldValue = oldObj ? oldObj[key] : undefined;
-      const newValue = newObj ? newObj[key] : undefined;
-      if (change === undefined) {
-        // Unchanged
-        results.push({
-          path: currentPath,
-          oldValue,
-          newValue,
-          type: 'unchanged'
-        });
-      } else if (Array.isArray(change)) {
-        if (change.length === 1) {
-          results.push({
-            path: currentPath,
-            oldValue: undefined,
-            newValue: change[0],
-            type: 'added'
-          });
-        } else if (change.length === 2) {
-          results.push({
-            path: currentPath,
-            oldValue: change[0],
-            newValue: change[1],
-            type: 'modified'
-          });
-        } else if (change.length === 3 && change[2] === 0) {
-          results.push({
-            path: currentPath,
-            oldValue: change[0],
-            newValue: undefined,
-            type: 'removed'
-          });
-        }
-      } else if (typeof change === 'object') {
-        // Recursively build children
-        results.push({
-          path: currentPath,
-          oldValue,
-          newValue,
-          type: 'modified',
-          children: this.buildDiffTree(
-            change,
-            oldValue,
-            newValue,
-            currentPath
-          )
-        });
-      }
+      this.processDiffKey(key, delta, oldObj, newObj, path, results);
     });
     return results;
   }
