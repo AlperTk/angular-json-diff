@@ -26,7 +26,7 @@ export class TableJsonDiffViewerComponent {
    *   'modified'- expand only modified expandable rows
    *   'none'    - expand none (default)
    */
-  @Input() autoExpand: 'all' | 'modified' | 'none' = 'none';
+  @Input() autoExpand: 'all' | 'changed' | 'none' = 'none';
 
   diffResults: DiffResult[] = [];
   showOriginalColumn = true;
@@ -204,9 +204,9 @@ export class TableJsonDiffViewerComponent {
             this.expandedRows.add(i);
           }
         });
-      } else if (this.autoExpand === 'modified') {
+      } else if (this.autoExpand === 'changed') {
         this.diffResults.forEach((diff, i) => {
-          if (this.isExpandable(diff) && diff.type === 'modified') {
+          if (this.isExpandable(diff) && diff.type !== 'unchanged') {
             this.expandedRows.add(i);
           }
         });
