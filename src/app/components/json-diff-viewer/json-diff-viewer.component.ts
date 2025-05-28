@@ -180,43 +180,68 @@ export class JsonDiffViewerComponent implements OnChanges {
     lines[index].type = type;
   }
 
-  private findLineWithKey(lines: { content: string }[], key: string): number {
+private findLineWithKey(lines: { content: string }[], key: string): number {
     const parts = key.split('.');
     let currentPart = parts[parts.length - 1];
 
-    // Handle underscore prefixed numbers (e.g. "_2")
-    if (currentPart.startsWith('_') && !isNaN(Number(currentPart.substring(1)))) {
-        currentPart = currentPart.substring(1); // Remove underscore
+    // Handle underscore-prefixed array indices (e.g., _0)
+    if (currentPart.startsWith('_') && !isNaN(Number(currentPart.slice(1)))) {
+        currentPart = currentPart.slice(1);
     }
 
-    // If currentPart is a number, treat as array index
+    // If currentPart is numeric → array index access
     if (!isNaN(Number(currentPart))) {
-        // Find the parent array start
+        const arrayIndex = Number(currentPart);
         const parentKey = parts.slice(0, -1).join('.');
-        const parentIdx = parentKey
-            ? this.findLineWithKey(lines, parentKey)
-            : -1;
-        let arrayIdx = -1;
-        for (let i = parentIdx + 1; i < lines.length; i++) {
+        const parentStart = parentKey ? this.findLineWithKey(lines, parentKey) : -1;
+
+        let level = 0;
+        let index = -1;
+        let inArray = false;
+
+        for (let i = parentStart + 1; i < lines.length; i++) {
             const trimmed = lines[i].content.trim();
-            if (trimmed === ']' || trimmed === '],') break;
-            // Only count lines that are likely array values (not brackets)
-            if (trimmed !== '[' && trimmed !== ']' && trimmed !== '],') {
-                arrayIdx++;
-                if (arrayIdx === Number(currentPart)) {
-                    return i;
+
+            // Track structure nesting
+            for (const char of trimmed) {
+                if (char === '[') {
+                    level++;
+                    if (level === 1) inArray = true;
+                }
+                if (char === ']') {
+                    if (level === 1) inArray = false;
+                    level--;
+                }
+                if (char === '{') {
+                    if (inArray && level === 1) {
+                        index++;
+                        if (index === arrayIndex) {
+                            return i;
+                        }
+                    }
+                    level++;
+                }
+                if (char === '}') {
+                    level--;
                 }
             }
         }
+
         return -1;
     }
 
-    // Default: look for object key
-    return lines.findIndex(line => {
-        const trimmed = line.content.trim();
-        return trimmed.includes(`"${currentPart}":`);
-    });
-  }
+    // Handle object key lookup
+    const keyToFind = `"${currentPart}":`;
+    for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].content.trim();
+        if (trimmed.includes(keyToFind)) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+ 
 
   private isClosingBracket(line: string): boolean {
     const trimmed = line.trim();
