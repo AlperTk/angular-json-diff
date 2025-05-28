@@ -45,7 +45,9 @@
             <app-table-json-diff-viewer
               [oldJson]="getSubJson(diff.oldValue)"
               [newJson]="getSubJson(diff.newValue)"
-              [autoExpand]="autoExpand">
+              [autoExpand]="autoExpand"
+              [hideTypes]="hideTypes"
+              >
             </app-table-json-diff-viewer>
           </td>
         </tr>

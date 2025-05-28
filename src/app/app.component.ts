@@ -20,12 +20,36 @@ export class AppComponent {
   title = 'my-angular-app';
 
   json1 = `
-{"b": [5]}
+{
+  "name": "Alice",
+  "age": 30,
+  "email": "alice@example.com",
+  "isActive": true,
+  "roles": ["admin", "editor"],
+  "address": {
+    "street": "123 Main St",
+    "city": "Springfield",
+    "zip": "12345"
+  },
+  "lastLogin": "2025-05-27T10:30:00Z"
+}
 `;
 
   json2 = `
-{"b": [{"a": "b"}]}
+{
+  "name": "Alice",
+  "age": 30,
+  "email": "alice2@example.com",
+  "isActive": true,
+  "roles": ["admin2", "editor"],
+  "address": {
+    "street": "123 Main St",
+    "city": "Springfield",
+    "zip": "12345"
+  },
+  "lastLogin": "2025-05-27T10:30:00Z"
+}
 `;
 
-  activeTab: 'line' | 'table' = 'line';
+  activeTab: 'line' | 'table' = 'table';
 }

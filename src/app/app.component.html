@@ -37,7 +37,9 @@
       <app-table-json-diff-viewer
         [oldJson]="json1"
         [newJson]="json2"
-        autoExpand="changed">
+        autoExpand="changed"
+        [hideTypes]="['unchanged']"
+        >
       </app-table-json-diff-viewer>
     </div>
   </div>

@@ -181,31 +181,25 @@ export class JsonDiffViewerComponent implements OnChanges {
   }
 
   private findLineWithKey(lines: { content: string }[], key: string): number {
-    console.log(`Searching for key: "${key}"`);
 
     const parts = key.split('.');
     let currentPart = parts[parts.length - 1];
-    console.log(`Current key part: "${currentPart}"`);
 
     // Handle underscore-prefixed array indices (e.g., _0)
     if (currentPart.startsWith('_') && !isNaN(Number(currentPart.slice(1)))) {
       currentPart = currentPart.slice(1);
-      console.log(`Detected underscore-prefixed index. Cleaned part: "${currentPart}"`);
     }
 
     // If currentPart is numeric → array index
     if (!isNaN(Number(currentPart))) {
       const arrayIndex = Number(currentPart);
       const parentKey = parts.slice(0, -1).join('.');
-      console.log(`Array index detected: ${arrayIndex}, Parent key: "${parentKey}"`);
 
       const parentStart = parentKey ? this.findLineWithKey(lines, parentKey) : -1;
-      console.log(`Parent key line index: ${parentStart}`);
 
       // If parent array is inline on one line:
       if (parentStart !== -1) {
         const lineContent = lines[parentStart].content.trim();
-        console.log(`Parent line content: "${lineContent}"`);
 
         const openBracketIdx = lineContent.indexOf('[');
         const closeBracketIdx = lineContent.lastIndexOf(']');
@@ -213,13 +207,10 @@ export class JsonDiffViewerComponent implements OnChanges {
         if (openBracketIdx !== -1 && closeBracketIdx !== -1 && closeBracketIdx > openBracketIdx) {
           const arrayContent = lineContent.substring(openBracketIdx + 1, closeBracketIdx);
           const elements = arrayContent.split(',').map(e => e.trim());
-          console.log(`Inline array detected with elements:`, elements);
 
           if (arrayIndex < elements.length) {
-            console.log(`Returning parent line index for inline array element: ${parentStart}`);
             return parentStart;
           } else {
-            console.log(`Array index out of bounds`);
             return -1;
           }
         }
@@ -232,7 +223,6 @@ export class JsonDiffViewerComponent implements OnChanges {
       const startingPoint = parentStart !== -1 ? parentStart : 0;
       for (let i = startingPoint; i < lines.length; i++) {
         const trimmed = lines[i].content.trim();
-        console.log(`Scanning line ${i}: "${trimmed}"`);
 
         if (trimmed.endsWith('[')) {
           level++;
@@ -251,32 +241,26 @@ export class JsonDiffViewerComponent implements OnChanges {
         if (inArray) {
 
           index++;
-          console.log(`Array element index ${index} at line ${i}`);
 
           if (index === arrayIndex) {
-            console.log(`Found array element at line ${i}`);
             return i; // i starts from parent line index so we add +1
           }
         }
       }
 
-      console.log(`Array element not found`);
       return -1;
     }
 
     // Handle object key lookup
     const keyToFind = `"${currentPart}":`;
-    console.log(`Looking for object key: ${keyToFind}`);
 
     for (let i = 0; i < lines.length; i++) {
       const trimmed = lines[i].content.trim();
       if (trimmed.includes(keyToFind)) {
-        console.log(`Found key at line ${i}: "${trimmed}"`);
         return i;
       }
     }
 
-    console.log(`Key "${keyToFind}" not found`);
     return -1;
   }
 
