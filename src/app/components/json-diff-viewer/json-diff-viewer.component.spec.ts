@@ -21,7 +21,7 @@ describe('JsonDiffViewerComponent', () => {
   it('should detect simple property changes', () => {
     component.oldJson = '{"name": "Alice", "age": 30}';
     component.newJson = '{"name": "Alice", "age": 31}';
-    
+
     component.ngOnChanges();
     fixture.detectChanges();
 
@@ -42,12 +42,12 @@ describe('JsonDiffViewerComponent', () => {
       }
     }`;
     component.newJson = '{"name": "Alice"}';
-    
+
     component.ngOnChanges();
     fixture.detectChanges();
 
     const removedLines = fixture.nativeElement.querySelectorAll('.removed');
-    expect(removedLines.length).toBeGreaterThan(0);
+    expect(removedLines.length).toBe(7);
     expect(removedLines[0].textContent).toContain('contact');
   });
 
@@ -59,12 +59,12 @@ describe('JsonDiffViewerComponent', () => {
         "email": "alice@email.com"
       }
     }`;
-    
+
     component.ngOnChanges();
     fixture.detectChanges();
 
     const addedLines = fixture.nativeElement.querySelectorAll('.added');
-    expect(addedLines.length).toBeGreaterThan(0);
+    expect(addedLines.length).toBe(3);
     expect(addedLines[0].textContent).toContain('contact');
   });
 
@@ -72,7 +72,7 @@ describe('JsonDiffViewerComponent', () => {
     spyOn(console, 'error');
     component.oldJson = 'invalid json';
     component.newJson = '{"name": "Alice"}';
-    
+
     component.ngOnChanges();
     fixture.detectChanges();
 
@@ -92,7 +92,7 @@ describe('JsonDiffViewerComponent', () => {
         "email": "alice@new.com"
       }
     }`;
-    
+
     component.ngOnChanges();
     fixture.detectChanges();
 
@@ -104,7 +104,7 @@ describe('JsonDiffViewerComponent', () => {
   it('should hide panel when JSON is null', () => {
     component.oldJson = null;
     component.newJson = '{"name": "Alice"}';
-    
+
     component.ngOnChanges();
     fixture.detectChanges();
 
@@ -116,7 +116,7 @@ describe('JsonDiffViewerComponent', () => {
   it('should handle array changes correctly', () => {
     component.oldJson = '{"items": [1, 2, 3]}';
     component.newJson = '{"items": [1, 4, 3]}';
-    
+
     component.ngOnChanges();
     fixture.detectChanges();
 
@@ -125,14 +125,14 @@ describe('JsonDiffViewerComponent', () => {
     const newModifiedLines = Array.from<Element>(fixture.nativeElement.querySelectorAll('.added'))
       .filter(el => el.textContent && el.textContent.includes('4'));
 
-    expect(oldModifiedLines.length).toBeGreaterThan(0);
-    expect(newModifiedLines.length).toBeGreaterThan(0);
+    expect(oldModifiedLines.length).toBe(1);
+    expect(newModifiedLines.length).toBe(1);
   });
 
   it('should handle multiple property changes', () => {
     component.oldJson = '{"name": "Alice", "age": 30, "city": "New York"}';
     component.newJson = '{"name": "Bob", "age": 31, "city": "Boston"}';
-    
+
     component.ngOnChanges();
     fixture.detectChanges();
 
@@ -154,8 +154,8 @@ describe('JsonDiffViewerComponent', () => {
       .filter(el => el.textContent && (el.textContent.includes('1') || el.textContent.includes('3')));
 
     // At least one of the moved numbers should be highlighted as changed in both views
-    expect(oldRemovedLines.length).toBeGreaterThan(0);
-    expect(newAddedLines.length).toBeGreaterThan(0);
+    expect(oldRemovedLines.length).toBe(1);
+    expect(newAddedLines.length).toBe(1);
   });
 
   it('should detect changes in deeply nested arrays and objects', () => {
@@ -170,8 +170,8 @@ describe('JsonDiffViewerComponent', () => {
     const newAdded = Array.from<Element>(fixture.nativeElement.querySelectorAll('.added'))
       .filter(el => el.textContent && el.textContent.includes('4'));
 
-    expect(oldRemoved.length).toBeGreaterThan(0);
-    expect(newAdded.length).toBeGreaterThan(0);
+    expect(oldRemoved.length).toBe(1);
+    expect(newAdded.length).toBe(1);
   });
 
   it('should detect type changes', () => {
@@ -232,4 +232,25 @@ describe('JsonDiffViewerComponent', () => {
     expect(added.length + removed.length + modified.length).toBe(0);
   });
 
+  it('should detect array type changes from number to object', () => {
+    component.oldJson = '{"b": [5]}';
+    component.newJson = '{"b": [{"a": "b"}]}';
+
+    component.ngOnChanges();
+    fixture.detectChanges();
+
+    const oldRemovedLines = Array.from<Element>(fixture.nativeElement.querySelectorAll('.removed'))
+      .filter(el => el.textContent && el.textContent.includes('5'));
+    const newAddedLines = Array.from<Element>(fixture.nativeElement.querySelectorAll('.added'))
+      .filter(el => el.textContent &&
+        (
+          el.textContent.includes('"a": "b"')
+          || el.textContent.includes('{')
+          || el.textContent.includes('}')
+        )
+      );
+
+  expect(oldRemovedLines.length).toBe(1);
+  expect(newAddedLines.length).toBe(3);
+});
 });

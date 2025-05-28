@@ -248,7 +248,7 @@ export class JsonDiffViewerComponent implements OnChanges {
           level--;
         }
 
-        if (inArray && level === 1) {
+        if (inArray) {
 
           index++;
           console.log(`Array element index ${index} at line ${i}`);
