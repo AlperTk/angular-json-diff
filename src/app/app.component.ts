@@ -20,20 +20,11 @@ export class AppComponent {
   title = 'my-angular-app';
 
   json1 = `
-
-[
-{"a": "a"}
-]
-
+{"a": {"b": {"c": [1, 2, 3]}}}
 `;
 
   json2 = `
-
-[
-{"a": "a"},
-{"a2": "a2"}
-]
-
+{"a": {"b": {"c": [1, 4, 3]}}}
 `;
 
   activeTab: 'line' | 'table' = 'line';

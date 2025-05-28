@@ -17,7 +17,7 @@ interface DiffDelta {
 export class JsonDiffViewerComponent implements OnChanges {
   @Input() oldJson: string | null = '';
   @Input() newJson: string | null = '';
-  
+
   oldJsonLines: { content: string; changed?: boolean; type?: string }[] = [];
   newJsonLines: { content: string; changed?: boolean; type?: string }[] = [];
 
@@ -35,7 +35,7 @@ export class JsonDiffViewerComponent implements OnChanges {
     // Sort object keys
     const sortedKeys = Object.keys(obj).sort((a, b) => a.localeCompare(b));
     const result: { [key: string]: any } = {};
-    
+
     for (const key of sortedKeys) {
       result[key] = this.sortObject(obj[key]);
     }
@@ -103,7 +103,7 @@ export class JsonDiffViewerComponent implements OnChanges {
 
     Object.entries(delta).forEach(([key, change]) => {
       const fullKey = parentKey ? `${parentKey}.${key}` : key;
-      
+
       if (Array.isArray(change)) {
         this.handleArrayChange(fullKey, change);
       } else if (typeof change === 'object') {
@@ -119,7 +119,7 @@ export class JsonDiffViewerComponent implements OnChanges {
     } else if (change.length === 2) { // Modified
       const oldLineIndex = this.findLineWithKey(this.oldJsonLines, key);
       const newLineIndex = this.findLineWithKey(this.newJsonLines, key);
-      
+
       if (oldLineIndex >= 0) {
         this.markLine(this.oldJsonLines, oldLineIndex, 'modified');
       }
@@ -180,68 +180,108 @@ export class JsonDiffViewerComponent implements OnChanges {
     lines[index].type = type;
   }
 
-private findLineWithKey(lines: { content: string }[], key: string): number {
+  private findLineWithKey(lines: { content: string }[], key: string): number {
+    console.log(`Searching for key: "${key}"`);
+
     const parts = key.split('.');
     let currentPart = parts[parts.length - 1];
+    console.log(`Current key part: "${currentPart}"`);
 
     // Handle underscore-prefixed array indices (e.g., _0)
     if (currentPart.startsWith('_') && !isNaN(Number(currentPart.slice(1)))) {
-        currentPart = currentPart.slice(1);
+      currentPart = currentPart.slice(1);
+      console.log(`Detected underscore-prefixed index. Cleaned part: "${currentPart}"`);
     }
 
-    // If currentPart is numeric → array index access
+    // If currentPart is numeric → array index
     if (!isNaN(Number(currentPart))) {
-        const arrayIndex = Number(currentPart);
-        const parentKey = parts.slice(0, -1).join('.');
-        const parentStart = parentKey ? this.findLineWithKey(lines, parentKey) : -1;
+      const arrayIndex = Number(currentPart);
+      const parentKey = parts.slice(0, -1).join('.');
+      console.log(`Array index detected: ${arrayIndex}, Parent key: "${parentKey}"`);
 
-        let level = 0;
-        let index = -1;
-        let inArray = false;
+      const parentStart = parentKey ? this.findLineWithKey(lines, parentKey) : -1;
+      console.log(`Parent key line index: ${parentStart}`);
 
-        for (let i = parentStart + 1; i < lines.length; i++) {
-            const trimmed = lines[i].content.trim();
+      // If parent array is inline on one line:
+      if (parentStart !== -1) {
+        const lineContent = lines[parentStart].content.trim();
+        console.log(`Parent line content: "${lineContent}"`);
 
-            // Track structure nesting
-            for (const char of trimmed) {
-                if (char === '[') {
-                    level++;
-                    if (level === 1) inArray = true;
-                }
-                if (char === ']') {
-                    if (level === 1) inArray = false;
-                    level--;
-                }
-                if (char === '{') {
-                    if (inArray && level === 1) {
-                        index++;
-                        if (index === arrayIndex) {
-                            return i;
-                        }
-                    }
-                    level++;
-                }
-                if (char === '}') {
-                    level--;
-                }
-            }
+        const openBracketIdx = lineContent.indexOf('[');
+        const closeBracketIdx = lineContent.lastIndexOf(']');
+
+        if (openBracketIdx !== -1 && closeBracketIdx !== -1 && closeBracketIdx > openBracketIdx) {
+          const arrayContent = lineContent.substring(openBracketIdx + 1, closeBracketIdx);
+          const elements = arrayContent.split(',').map(e => e.trim());
+          console.log(`Inline array detected with elements:`, elements);
+
+          if (arrayIndex < elements.length) {
+            console.log(`Returning parent line index for inline array element: ${parentStart}`);
+            return parentStart;
+          } else {
+            console.log(`Array index out of bounds`);
+            return -1;
+          }
+        }
+      }
+
+      // Multiline array fallback
+      let level = 0;
+      let index = -1;
+      let inArray = false;
+      const startingPoint = parentStart !== -1 ? parentStart : 0;
+      for (let i = startingPoint; i < lines.length; i++) {
+        const trimmed = lines[i].content.trim();
+        console.log(`Scanning line ${i}: "${trimmed}"`);
+
+        if (trimmed.endsWith('[')) {
+          level++;
+          if (level === 1) inArray = true;
+          continue;
+        } else if (trimmed.endsWith(']') || trimmed.endsWith('],')) {
+          if (level === 1) inArray = false;
+          level--;
+          continue;
+        } else if (trimmed.endsWith('{')) {
+          level++;
+        } else if (trimmed.endsWith('}')) {
+          level--;
         }
 
-        return -1;
+        if (inArray && level === 1) {
+
+          index++;
+          console.log(`Array element index ${index} at line ${i}`);
+
+          if (index === arrayIndex) {
+            console.log(`Found array element at line ${i}`);
+            return i; // i starts from parent line index so we add +1
+          }
+        }
+      }
+
+      console.log(`Array element not found`);
+      return -1;
     }
 
     // Handle object key lookup
     const keyToFind = `"${currentPart}":`;
+    console.log(`Looking for object key: ${keyToFind}`);
+
     for (let i = 0; i < lines.length; i++) {
-        const trimmed = lines[i].content.trim();
-        if (trimmed.includes(keyToFind)) {
-            return i;
-        }
+      const trimmed = lines[i].content.trim();
+      if (trimmed.includes(keyToFind)) {
+        console.log(`Found key at line ${i}: "${trimmed}"`);
+        return i;
+      }
     }
 
+    console.log(`Key "${keyToFind}" not found`);
     return -1;
-}
- 
+  }
+
+
+
 
   private isClosingBracket(line: string): boolean {
     const trimmed = line.trim();
