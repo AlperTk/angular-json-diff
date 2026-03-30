@@ -69,7 +69,9 @@ describe('JsonDiffViewerComponent', () => {
   });
 
   it('should handle invalid JSON', () => {
-    spyOn(console, 'error');
+    const originalError = console.error;
+    console.error = jest.fn();
+    
     component.oldJson = 'invalid json';
     component.newJson = '{"name": "Alice"}';
 
@@ -77,6 +79,9 @@ describe('JsonDiffViewerComponent', () => {
     fixture.detectChanges();
 
     expect(console.error).toHaveBeenCalled();
+    
+    // Restore original error function
+    console.error = originalError;
   });
 
   it('should detect nested property modifications', () => {

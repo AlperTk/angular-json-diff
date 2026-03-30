@@ -88,7 +88,7 @@ describe('TableJsonDiffViewerComponent', () => {
     component.ngOnChanges();
     const nestedDiff = component.diffResults.find(r => r.path === 'nested');
     expect(nestedDiff).toBeDefined();
-    expect(Array.isArray(nestedDiff?.children)).toBeTrue();
+    expect(Array.isArray(nestedDiff?.children)).toBe(true);
     expect(nestedDiff?.children?.find(c => c.path === 'nested.a')).toEqual({
       path: 'nested.a',
       oldValue: 1,
@@ -103,7 +103,7 @@ describe('TableJsonDiffViewerComponent', () => {
     component.ngOnChanges();
     const arrDiff = component.diffResults.find(r => r.path === 'arr');
     expect(arrDiff).toBeDefined();
-    expect(Array.isArray(arrDiff?.children)).toBeTrue();
+    expect(Array.isArray(arrDiff?.children)).toBe(true);
     expect(arrDiff?.children?.find(r => r.path === 'arr.1' && r.type === 'modified')).toEqual({
       path: 'arr.1',
       oldValue: 2,
@@ -118,7 +118,7 @@ describe('TableJsonDiffViewerComponent', () => {
     component.ngOnChanges();
     const arrDiff = component.diffResults.find(r => r.path === 'arr');
     expect(arrDiff).toBeDefined();
-    expect(Array.isArray(arrDiff?.children)).toBeTrue();
+    expect(Array.isArray(arrDiff?.children)).toBe(true);
     expect(arrDiff?.children?.find(r => r.path === 'arr.2')).toEqual({
       path: 'arr.2',
       oldValue: undefined,
@@ -133,7 +133,7 @@ describe('TableJsonDiffViewerComponent', () => {
     component.ngOnChanges();
     const arrDiff = component.diffResults.find(r => r.path === 'arr');
     expect(arrDiff).toBeDefined();
-    expect(Array.isArray(arrDiff?.children)).toBeTrue();
+    expect(Array.isArray(arrDiff?.children)).toBe(true);
     expect(arrDiff?.children?.find(r => r.path === 'arr.2')).toEqual({
       path: 'arr.2',
       oldValue: 3,
@@ -197,7 +197,7 @@ describe('TableJsonDiffViewerComponent', () => {
     // Should detect removed and added for moved items
     const arrDiff = component.diffResults.find(r => r.path === 'arr');
     expect(arrDiff).toBeDefined();
-    expect(Array.isArray(arrDiff?.children)).toBeTrue();
+    expect(Array.isArray(arrDiff?.children)).toBe(true);
     expect(arrDiff?.children?.find(r => r.path === 'arr.0')).toEqual({
       path: 'arr.0',
       oldValue: 1,
@@ -222,7 +222,7 @@ describe('TableJsonDiffViewerComponent', () => {
     expect(bDiff).toBeDefined();
     const cDiff = bDiff?.children?.find(r => r.path === 'a.b.c');
     expect(cDiff).toBeDefined();
-    expect(Array.isArray(cDiff?.children)).toBeTrue();
+    expect(Array.isArray(cDiff?.children)).toBe(true);
     expect(cDiff?.children?.find(r => r.path === 'a.b.c.1' && r.type === 'modified')).toEqual({
       path: 'a.b.c.1',
       oldValue: 2,

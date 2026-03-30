@@ -50,6 +50,9 @@
       "<rootDir>/node_modules/",
       "<rootDir>/dist/"
     ],
+    "transformIgnorePatterns": [
+      "node_modules/(?!jsondiffpatch|@angular|ngx-highlightjs)"
+    ],
     "globals": {
       "ts-jest": {
         "tsconfig": "<rootDir>/tsconfig.spec.json"
