@@ -179,6 +179,20 @@ describe('JsonDiffViewerComponent', () => {
     expect(newAdded.length).toBe(1);
   });
 
+  it('should detect array item property changes', () => {
+    component.oldJson = '[{"id": 1, "name": "Item One"}, {"id": 2, "name": "Item Two"}]';
+    component.newJson = '[{"id": 1, "name": "Item One"}, {"id": 2, "name": "Item 2"}]';
+
+    component.ngOnChanges();
+    fixture.detectChanges();
+
+    const modifiedLines = fixture.nativeElement.querySelectorAll('.modified');
+    expect(modifiedLines.length).toBe(2); // One in each view
+    expect(modifiedLines[0].textContent).toContain('name');
+    expect(modifiedLines[0].textContent).toContain('Item Two');
+    expect(modifiedLines[1].textContent).toContain('Item 2');
+  });
+
   it('should detect type changes', () => {
     component.oldJson = '{"value": 123}';
     component.newJson = '{"value": "123"}';
@@ -216,8 +230,8 @@ describe('JsonDiffViewerComponent', () => {
   });
 
   it('should handle empty inputs', () => {
-    component.oldJson = '';
-    component.newJson = '';
+    component.oldJson = null;
+    component.newJson = null;
     component.ngOnChanges();
     fixture.detectChanges();
 
@@ -255,7 +269,7 @@ describe('JsonDiffViewerComponent', () => {
         )
       );
 
-  expect(oldRemovedLines.length).toBe(1);
-  expect(newAddedLines.length).toBe(3);
-});
+    expect(oldRemovedLines.length).toBe(1);
+    expect(newAddedLines.length).toBe(3);
+  });
 });

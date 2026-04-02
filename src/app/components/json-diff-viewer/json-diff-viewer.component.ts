@@ -116,15 +116,34 @@ export class JsonDiffViewerComponent implements OnChanges {
   private handleArrayChange(key: string, change: any[]) {
     if (change.length === 1) { // Added
       this.markObjectLines(this.newJsonLines, key, change[0], 'added');
-    } else if (change.length === 2) { // Modified
-      const oldLineIndex = this.findLineWithKey(this.oldJsonLines, key);
-      const newLineIndex = this.findLineWithKey(this.newJsonLines, key);
+    } else if (change.length === 2) { // Modified - we need to find the actual line containing the modified property
+      // For array item property changes, look for lines that contain the property being changed
+      const parts = key.split('.');
+      const lastPart = parts[parts.length - 1];
+      
+      // If last part is a number, it's an array index, so we need to find the parent object
+      if (!isNaN(Number(lastPart))) {
+        // For nested changes like "1.name", we need to mark the parent object line and the property line
+        const parentKey = parts.slice(0, -1).join('.');
+        const parentLineIndex = this.findLineWithKey(this.oldJsonLines, parentKey);
+        if (parentLineIndex >= 0) {
+          this.markLine(this.oldJsonLines, parentLineIndex, 'modified');
+        }
+        const newParentLineIndex = this.findLineWithKey(this.newJsonLines, parentKey);
+        if (newParentLineIndex >= 0) {
+          this.markLine(this.newJsonLines, newParentLineIndex, 'modified');
+        }
+      } else {
+        // For regular property changes in objects
+        const oldLineIndex = this.findLineWithKey(this.oldJsonLines, key);
+        const newLineIndex = this.findLineWithKey(this.newJsonLines, key);
 
-      if (oldLineIndex >= 0) {
-        this.markLine(this.oldJsonLines, oldLineIndex, 'modified');
-      }
-      if (newLineIndex >= 0) {
-        this.markLine(this.newJsonLines, newLineIndex, 'modified');
+        if (oldLineIndex >= 0) {
+          this.markLine(this.oldJsonLines, oldLineIndex, 'modified');
+        }
+        if (newLineIndex >= 0) {
+          this.markLine(this.newJsonLines, newLineIndex, 'modified');
+        }
       }
     } else if (change.length === 3 && change[2] === 0) { // Removed
       this.markObjectLines(this.oldJsonLines, key, change[0], 'removed');
@@ -197,53 +216,71 @@ export class JsonDiffViewerComponent implements OnChanges {
 
       const parentStart = parentKey ? this.findLineWithKey(lines, parentKey) : -1;
 
-      // If parent array is inline on one line:
+      // If we have a parent and it's an inline array on one line:
       if (parentStart !== -1) {
         const lineContent = lines[parentStart].content.trim();
 
-        const openBracketIdx = lineContent.indexOf('[');
-        const closeBracketIdx = lineContent.lastIndexOf(']');
+        // Check if it's an inline array
+        if (lineContent.includes('[') && lineContent.includes(']')) {
+          const openBracketIdx = lineContent.indexOf('[');
+          const closeBracketIdx = lineContent.lastIndexOf(']');
 
-        if (openBracketIdx !== -1 && closeBracketIdx !== -1 && closeBracketIdx > openBracketIdx) {
-          const arrayContent = lineContent.substring(openBracketIdx + 1, closeBracketIdx);
-          const elements = arrayContent.split(',').map(e => e.trim());
+          if (openBracketIdx !== -1 && closeBracketIdx !== -1 && closeBracketIdx > openBracketIdx) {
+            const arrayContent = lineContent.substring(openBracketIdx + 1, closeBracketIdx);
+            const elements = arrayContent.split(',').map(e => e.trim());
 
-          if (arrayIndex < elements.length) {
-            return parentStart;
-          } else {
-            return -1;
+            // If we're looking for an element that exists in the inline array
+            if (arrayIndex < elements.length) {
+              // For inline arrays, we should return the parent line since the entire array is marked
+              return parentStart;
+            }
           }
         }
       }
 
-      // Multiline array fallback
+      // Multiline array fallback – count only array-item boundaries, not every inner line.
+      // Rules:
+      //   • A line at level 1 (direct child of the target array) is the START of a new item.
+      //   • If that line opens a block ({ or [) we increase level so inner lines are skipped.
+      //   • Closing brackets (} / ]) restore the level.
       let level = 0;
-      let index = -1;
       let inArray = false;
+      let itemCount = -1;
       const startingPoint = parentStart !== -1 ? parentStart : 0;
+
       for (let i = startingPoint; i < lines.length; i++) {
         const trimmed = lines[i].content.trim();
 
-        if (trimmed.endsWith('[')) {
-          level++;
-          if (level === 1) inArray = true;
-          continue;
-        } else if (trimmed.endsWith(']') || trimmed.endsWith('],')) {
-          if (level === 1) inArray = false;
-          level--;
-          continue;
-        } else if (trimmed.endsWith('{')) {
-          level++;
-        } else if (trimmed.endsWith('}')) {
-          level--;
-        }
+        if (inArray && level === 1) {
+          // ── At the direct-child level of the target array ──
+          // Closing bracket ends the array – stop searching.
+          if (trimmed === ']' || trimmed === '],') {
+            break;
+          }
 
-        if (inArray) {
+          // Every line here is the start of a new array item.
+          itemCount++;
+          if (itemCount === arrayIndex) {
+            return i;
+          }
 
-          index++;
-
-          if (index === arrayIndex) {
-            return i; // i starts from parent line index so we add +1
+          // If this item opens a block, step into it so inner lines are skipped.
+          if (trimmed.endsWith('{') || trimmed.endsWith('[')) {
+            level++;
+          }
+          // Primitive items (no block) keep level at 1 → next line = next item.
+        } else {
+          // ── Not yet inside the target array, or inside a nested block ──
+          if (trimmed.endsWith('[')) {
+            level++;
+            if (level === 1) inArray = true;
+          } else if (trimmed === ']' || trimmed === '],') {
+            if (level === 1) inArray = false;
+            level--;
+          } else if (trimmed.endsWith('{')) {
+            level++;
+          } else if (trimmed === '}' || trimmed === '},') {
+            level--;
           }
         }
       }
@@ -254,6 +291,33 @@ export class JsonDiffViewerComponent implements OnChanges {
     // Handle object key lookup
     const keyToFind = `"${currentPart}":`;
 
+    // When there is a parent key, restrict the search to the parent's scope so
+    // we don't accidentally match a same-named property in a different object.
+    const parentKey = parts.slice(0, -1).join('.');
+    if (parentKey) {
+      const parentLineIdx = this.findLineWithKey(lines, parentKey);
+      if (parentLineIdx >= 0) {
+        const parentIndent = this.getIndentLevel(lines[parentLineIdx].content);
+
+        for (let i = parentLineIdx + 1; i < lines.length; i++) {
+          const currentLine = lines[i].content;
+          const currentIndent = this.getIndentLevel(currentLine);
+          const trimmed = currentLine.trim();
+
+          // Stop once we have left the parent's scope.
+          if (currentIndent <= parentIndent && (trimmed.startsWith('}') || trimmed.startsWith(']'))) {
+            break;
+          }
+
+          if (trimmed.includes(keyToFind)) {
+            return i;
+          }
+        }
+        return -1;
+      }
+    }
+
+    // No parent (or parent not found) – fall back to a global search.
     for (let i = 0; i < lines.length; i++) {
       const trimmed = lines[i].content.trim();
       if (trimmed.includes(keyToFind)) {
