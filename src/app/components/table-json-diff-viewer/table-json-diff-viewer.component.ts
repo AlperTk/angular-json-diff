@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, Input, OnChanges, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import * as jsondiffpatch from 'jsondiffpatch';
 
@@ -22,6 +22,7 @@ export class TableJsonDiffViewerComponent {
   @Input() newJson: string | null = '';
   @Input() autoExpand: 'all' | 'changed' | 'none' = 'none';
   @Input() hideTypes: string[] = [];
+  @Output() translate = new EventEmitter<{key: string, params?: any}>();
 
   _diffResults: DiffResult[] = [];
   showOriginalColumn = true;
@@ -35,6 +36,21 @@ export class TableJsonDiffViewerComponent {
   get diffResults(): DiffResult[] {
     // return this.filterDiffResults(this._diffResults, this.hideTypes);
     return this._diffResults;
+  }
+
+  translateText(key: string, defaultValue: string, params?: any): string {
+    if (this.translate.observers.length > 0) {
+      this.translate.emit({key, params});
+      
+      return defaultValue;
+    }
+    // If no translation function, return default text
+    return defaultValue;
+  }
+
+  // Helper method to translate change types
+  translateType(type: string): string {
+    return this.translateText(type, type);
   }
 
   private filterDiffResults(results: DiffResult[], hiddenTypes: string[]): DiffResult[] {

@@ -2,10 +2,10 @@
   <table class="diff-table">
     <thead>
       <tr>
-        <th>Path</th>
-        <th *ngIf="showOriginalColumn">Original Value</th>
-        <th *ngIf="showModifiedColumn">Modified Value</th>
-        <th>Change Type</th>
+        <th>{{ translateText('path', 'Path') }}</th>
+        <th *ngIf="showOriginalColumn">{{ translateText('originalValue', 'Original Value') }}</th>
+        <th *ngIf="showModifiedColumn">{{ translateText('modifiedValue', 'Modified Value') }}</th>
+        <th>{{ translateText('changeType', 'Change Type') }}</th>
       </tr>
     </thead>
     <tbody>
@@ -25,7 +25,7 @@
             <ng-container *ngIf="diff.oldValue !== undefined && !isExpandableValue(diff.oldValue)">
               <pre>{{ diff.oldValue | json }}</pre>
             </ng-container>
-            <span *ngIf="diff.oldValue === undefined || isExpandableValue(diff.oldValue) && !isExpandableValue(diff.newValue)" class="empty-value">Empty</span>
+            <span *ngIf="diff.oldValue === undefined || isExpandableValue(diff.oldValue) && !isExpandableValue(diff.newValue)" class="empty-value">{{ translateText('empty', 'Empty') }}</span>
           </td>
           <td *ngIf="showModifiedColumn" class="value-cell" [ngClass]="{
             'added': diff.type === 'added',
@@ -34,10 +34,10 @@
             <ng-container *ngIf="diff.newValue !== undefined && !isExpandableValue(diff.newValue)">
               <pre>{{ diff.newValue | json }}</pre>
             </ng-container>
-            <span *ngIf="diff.newValue === undefined || isExpandableValue(diff.newValue) && !isExpandableValue(diff.newValue)" class="empty-value">Empty</span>
+            <span *ngIf="diff.newValue === undefined || isExpandableValue(diff.newValue) && !isExpandableValue(diff.newValue)" class="empty-value">{{ translateText('empty', 'Empty') }}</span>
           </td>
           <td class="type-cell">
-            <span class="change-badge">{{ diff.type }}</span>
+            <span class="change-badge">{{ translateType(diff.type) }}</span>
           </td>
         </tr>
         <tr *ngIf="isExpanded(i) && isExpandable(diff)">
