@@ -23,6 +23,9 @@ export class TableJsonDiffViewerComponent {
   @Input() autoExpand: 'all' | 'changed' | 'none' = 'none';
   @Input() hideTypes: string[] = [];
   @Output() translate = new EventEmitter<{key: string, params?: any}>();
+  @Input() objectHashFunction: ((obj: any) => any) = function (obj) {
+    return obj.id || JSON.stringify(obj);
+  };
 
   _diffResults: DiffResult[] = [];
   showOriginalColumn = true;
@@ -96,6 +99,7 @@ export class TableJsonDiffViewerComponent {
     this.showModifiedColumn = true;
 
     const diffpatcher = jsondiffpatch.create({
+      objectHash: this.objectHashFunction,
       arrays: {
         detectMove: false // treat order changes as modifications
       }
