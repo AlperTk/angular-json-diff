@@ -256,5 +256,86 @@ describe('TableJsonDiffViewerComponent', () => {
     });
   });
 
+  it('should handle array removal scenario', () => {
+    // Testing the specific scenario from HTML output with correct JSON
+    component.oldJson = '[{"id": 1}, {"id": 2}, {"id": 3}]';
+    component.newJson = '[{"id": 2}, {"id": 3}]';
+    component.ngOnChanges();
+    
+    expect(component.diffResults.length).toBe(3);
+    
+    // Check first item - removed (id=1 was in old but not new)
+    const firstItem = component.diffResults[0];
+    expect(firstItem.path).toBe('0');
+    expect(firstItem.type).toBe('removed');
+    expect(firstItem.oldValue).toEqual({id: 1});
+    expect(firstItem.newValue).toBeUndefined();
+    
+    // Check second item - unchanged (id=2 exists in both)
+    const secondItem = component.diffResults[1];
+    expect(secondItem.path).toBe('1');
+    expect(secondItem.type).toBe('unchanged');
+    expect(secondItem.oldValue).toEqual({id: 2});
+    expect(secondItem.newValue).toEqual({id: 2});
+    
+    // Check third item - unchanged (id=3 exists in both)
+    const thirdItem = component.diffResults[2];
+    expect(thirdItem.path).toBe('2');
+    expect(thirdItem.type).toBe('unchanged');
+    expect(thirdItem.oldValue).toEqual({id: 3});
+    expect(thirdItem.newValue).toEqual({id: 3});
+  });
+
+  it('should handle auto-expand functionality', () => {
+    component.oldJson = '[{"id": 1}, {"id": 2}]';
+    component.newJson = '[{"id": 2}, {"id": 3}]';
+    component.autoExpand = 'changed';
+    component.ngOnChanges();
+    
+    // Should expand rows that are not unchanged
+    expect(component.expandedRows.size).toBe(2); // Rows 0 and 2 should be expanded (removed and added)
+    expect(component.isExpanded(0)).toBe(true);
+    expect(component.isExpanded(1)).toBe(false); // unchanged row
+    expect(component.isExpanded(2)).toBe(true); // added row
+    
+    // Test with autoExpand='all'
+    component.autoExpand = 'all';
+    component.ngOnChanges();
+    expect(component.expandedRows.size).toBe(3); // All rows should be expanded
+    expect(component.isExpanded(0)).toBe(true);
+    expect(component.isExpanded(1)).toBe(true);
+    expect(component.isExpanded(2)).toBe(true);
+    
+    // Test with autoExpand='none'
+    component.autoExpand = 'none';
+    component.ngOnChanges();
+    expect(component.expandedRows.size).toBe(0); // No rows should be expanded
+  });
+
+  it('should handle expandable row logic', () => {
+    component.oldJson = '[{"id": 1}, {"id": 2}]';
+    component.newJson = '[{"id": 2}, {"id": 3}]';
+    component.ngOnChanges();
+    
+    // Check if rows are expandable
+    const firstItem = component.diffResults[0];
+    const secondItem = component.diffResults[1];
+    const thirdItem = component.diffResults[2];
+    
+    expect(component.isExpandable(firstItem)).toBe(true); // Object has properties to expand
+    expect(component.isExpandable(secondItem)).toBe(true); // Object has properties to expand  
+    expect(component.isExpandable(thirdItem)).toBe(true); // Object has properties to expand
+  });
+
+  it('should handle column visibility correctly', () => {
+    component.oldJson = '[{"id": 1}, {"id": 2}]';
+    component.newJson = '[{"id": 2}, {"id": 3}]';
+    component.ngOnChanges();
+    
+    // Both columns should be visible since we have both old and new values
+    expect(component.showOriginalColumn).toBe(true);
+    expect(component.showModifiedColumn).toBe(true);
+  });
+
 });
 

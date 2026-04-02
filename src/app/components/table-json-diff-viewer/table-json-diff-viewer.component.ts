@@ -1,14 +1,8 @@
-import { Component, Input, OnChanges, Output, EventEmitter } from '@angular/core';
+import { Component, Input, OnChanges, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import * as jsondiffpatch from 'jsondiffpatch';
-
-interface DiffResult {
-  path: string;
-  oldValue: any;
-  newValue: any;
-  type: 'added' | 'removed' | 'modified' | 'unchanged';
-  children?: DiffResult[]; // Add children for nested diffs
-}
+import { JsonDiffService } from '../../services/json-diff.service';
+import { DiffTreeBuilderService } from '../../services/diff-tree-builder.service';
+import { DiffResult } from '../../services/types';
 
 @Component({
   selector: 'app-table-json-diff-viewer',
@@ -18,13 +12,16 @@ interface DiffResult {
   styleUrls: ['./table-json-diff-viewer.component.scss']
 })
 export class TableJsonDiffViewerComponent implements OnChanges {
+  private jsonDiffService = inject(JsonDiffService);
+  private diffTreeBuilderService = inject(DiffTreeBuilderService);
+
   @Input() oldJson: string | null = '';
   @Input() newJson: string | null = '';
   @Input() autoExpand: 'all' | 'changed' | 'none' = 'none';
   @Input() hideTypes: string[] = [];
   @Output() translate = new EventEmitter<{key: string, params?: any}>();
   @Input() objectHashFunction: ((obj: any) => any) = function (obj) {
-    return obj.id || JSON.stringify(obj);
+    return obj && typeof obj === 'object' ? obj.id || JSON.stringify(obj) : obj;
   };
 
   _diffResults: DiffResult[] = [];
@@ -45,7 +42,6 @@ export class TableJsonDiffViewerComponent implements OnChanges {
       this.translate.emit({key, params});
       return defaultValue;
     }
-    // If no translation function, return default text
     return defaultValue;
   }
 
@@ -64,161 +60,37 @@ export class TableJsonDiffViewerComponent implements OnChanges {
       });
   }
 
-  private handleObjectCreation(newObj: any): DiffResult[] {
-    this.showOriginalColumn = false;
-    this.showModifiedColumn = true;
-    return Object.entries(newObj).map(([key, value]) => ({
-      path: key,
-      oldValue: undefined,
-      newValue: value,
-      type: 'added' as const
-    })).sort((a, b) => a.path.localeCompare(b.path));
-  }
-
-  private handleObjectDeletion(oldObj: any): DiffResult[] {
-    this.showOriginalColumn = true;
-    this.showModifiedColumn = false;
-    return Object.entries(oldObj).map(([key, value]) => ({
-      path: key,
-      oldValue: value,
-      newValue: undefined,
-      type: 'removed' as const
-    })).sort((a, b) => a.path.localeCompare(b.path));
+  private setColumnVisibility(oldObj: any, newObj: any): void {
+    if (!oldObj && newObj) {
+      this.showOriginalColumn = false;
+      this.showModifiedColumn = true;
+    } else if (oldObj && !newObj) {
+      this.showOriginalColumn = true;
+      this.showModifiedColumn = false;
+    } else {
+      this.showOriginalColumn = true;
+      this.showModifiedColumn = true;
+    }
   }
 
   private generateDiffResults(oldObj: any, newObj: any): void {
-    // Handle complete object creation
-    if (!oldObj && newObj) {
-      this.diffResults = this.handleObjectCreation(newObj);
-      return;
-    }
-
-    // Handle complete object deletion
-    if (oldObj && !newObj) {
-      this.diffResults = this.handleObjectDeletion(oldObj);
-      return;
-    }
-
-    // Both objects exist - show both columns
-    this.showOriginalColumn = true;
-    this.showModifiedColumn = true;
-
-    const diffpatcher = jsondiffpatch.create({
-      objectHash: this.objectHashFunction,
-      arrays: {
-        detectMove: false // treat order changes as modifications
-      }
-    });
-    const delta = diffpatcher.diff(oldObj, newObj);
-
-    this.diffResults = this.buildDiffTree(delta, oldObj, newObj);
-  }
-
-  private processDiffKey(
-    key: string,
-    delta: any,
-    oldObj: any,
-    newObj: any,
-    path: string,
-    results: DiffResult[]
-  ): void {
-    const currentPath = path ? `${path}.${key}` : key;
-    const change = delta[key] ?? delta["_" + key];
-    const oldValue = oldObj ? oldObj[key] : undefined;
-    const newValue = newObj ? newObj[key] : undefined;
-
-    if (change === undefined) {
-      // Unchanged
-      results.push({
-        path: currentPath,
-        oldValue,
-        newValue,
-        type: 'unchanged'
-      });
-    } else if (Array.isArray(change)) {
-      results.push({
-        path: currentPath,
-        oldValue: oldValue,
-        newValue: newValue,
-        type: this.getChangeType(oldValue, newValue)
-      });
-    } else if (typeof change === 'object') {
-      // Recursively build children
-      results.push({
-        path: currentPath,
-        oldValue,
-        newValue,
-        type: 'modified',
-        children: this.buildDiffTree(
-          change,
-          oldValue,
-          newValue,
-          currentPath
-        )
-      });
-    }
-  }
-
-  private getChangeType(oldValue: any, newValue: any): 'added' | 'removed' | 'modified' | 'unchanged' {
-    if (oldValue === undefined && newValue !== undefined) {
-      return 'added';
-    } else if (oldValue !== undefined && newValue === undefined) {
-      return 'removed';
-    } else if (oldValue !== newValue) {
-      return 'modified';
-    } else {
-      return 'unchanged';
-    }
-  }
-
-  // Recursively build a nested diff tree, including unchanged, added, and removed fields
-  private buildDiffTree(delta: any, oldObj: any, newObj: any, path: string = ''): DiffResult[] {
-    // If both are objects, collect all keys
-    const allKeys = new Set<string>();
-    if (oldObj && typeof oldObj === 'object') {
-      Object.keys(oldObj).forEach(k => allKeys.add(k));
-    }
-    if (newObj && typeof newObj === 'object') {
-      Object.keys(newObj).forEach(k => allKeys.add(k));
-    }
-    // If delta is null, everything is unchanged
-    if (!delta) {
-      return Array.from(allKeys).map(key => {
-        const currentPath = path ? `${path}.${key}` : key;
-        return {
-          path: currentPath,
-          oldValue: oldObj ? oldObj[key] : undefined,
-          newValue: newObj ? newObj[key] : undefined,
-          type: 'unchanged'
-        };
-      });
-    }
-    const results: DiffResult[] = [];
-    allKeys.forEach(key => {
-      this.processDiffKey(key, delta, oldObj, newObj, path, results);
-    });
-    return results;
+    this.setColumnVisibility(oldObj, newObj);
+    const delta = this.jsonDiffService.computeDiff(oldObj, newObj, this.objectHashFunction);
+    this.diffResults = this.diffTreeBuilderService.buildDiffResults(delta, oldObj, newObj, this.objectHashFunction);
   }
 
   ngOnChanges(): void {
-    let oldObj = null;
-    let newObj = null;
+    const oldResult = this.jsonDiffService.parseJson(this.oldJson);
+    const newResult = this.jsonDiffService.parseJson(this.newJson);
 
-    try {
-      oldObj = this.oldJson ? JSON.parse(this.oldJson) : null;
-    } catch (e) {
-      console.warn('Invalid old JSON:', e);
+    if (oldResult.error || newResult.error) {
+      // keep behavior similar to previous implementation: warn already emitted by service
+      this.diffResults = [];
+      return;
     }
 
-    try {
-      newObj = this.newJson ? JSON.parse(this.newJson) : null;
-    } catch (e) {
-      console.warn('Invalid new JSON:', e);
-    }
+    this.generateDiffResults(oldResult.value, newResult.value);
 
-    this.generateDiffResults(oldObj, newObj);
-
-    // Auto-expand logic based on flag
     this.expandedRows.clear();
     if (this.autoExpand === 'all') {
       this.diffResults.forEach((diff, i) => {
@@ -233,16 +105,12 @@ export class TableJsonDiffViewerComponent implements OnChanges {
         }
       });
     }
-    // 'none' does nothing (all collapsed)
   }
 
-  private getValueByPath(obj: any, path: string): any {
-    return path.split('.').reduce((current, key) => {
-      return current ? current[key] : undefined;
-    }, obj);
-  }
-
-  isExpandable(diff: DiffResult): boolean {
+  isExpandable(diff?: DiffResult): boolean {
+    if (!diff) {
+      return false;
+    }
     return this.isExpandableValue(diff.oldValue) || this.isExpandableValue(diff.newValue);
   }
 
@@ -270,18 +138,4 @@ export class TableJsonDiffViewerComponent implements OnChanges {
       return null;
     }
   }
-
-  // Utility method to replace underscores in keys
-  replaceUnderscoreKeys = (obj: any): any => {
-    if (Array.isArray(obj)) {
-      return obj.map(this.replaceUnderscoreKeys);
-    } else if (obj && typeof obj === 'object') {
-      return Object.entries(obj).reduce((acc, [key, value]) => {
-        const newKey = key.replace(/_/g, '');
-        acc[newKey] = this.replaceUnderscoreKeys(value);
-        return acc;
-      }, {} as any);
-    }
-    return obj;
-  };
 }
