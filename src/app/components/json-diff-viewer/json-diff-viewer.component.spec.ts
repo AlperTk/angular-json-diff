@@ -272,4 +272,20 @@ describe('JsonDiffViewerComponent', () => {
     expect(oldRemovedLines.length).toBe(1);
     expect(newAddedLines.length).toBe(3);
   });
+
+  it('should handle array removal scenario', () => {
+    // Testing the specific scenario from HTML output
+    component.oldJson = '[{"id": 1}, {"id": 2}, {"id": 3}]';
+    component.newJson = '[{"id": 2}, {"id": 3}]';
+    component.ngOnChanges();
+    fixture.detectChanges();
+    
+  const removedLines = fixture.nativeElement.querySelectorAll('.removed');
+  expect(removedLines.length).toBe(3); // 3 lines for the removed object
+  
+  // Validate each line content - what we actually get is the full object structure
+  expect(removedLines[0].textContent.trim()).toBe('{'); // Opening brace of removed object
+  expect(removedLines[1].textContent.trim()).toBe('"id": 1'); // Property content
+  expect(removedLines[2].textContent.trim()).toBe('},'); // Closing brace with comma (due to JSON formatting)
+  });
 });
