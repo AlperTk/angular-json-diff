@@ -17,7 +17,7 @@ interface DiffResult {
   templateUrl: './table-json-diff-viewer.component.html',
   styleUrls: ['./table-json-diff-viewer.component.scss']
 })
-export class TableJsonDiffViewerComponent {
+export class TableJsonDiffViewerComponent implements OnChanges {
   @Input() oldJson: string | null = '';
   @Input() newJson: string | null = '';
   @Input() autoExpand: 'all' | 'changed' | 'none' = 'none';
@@ -37,14 +37,12 @@ export class TableJsonDiffViewerComponent {
   }
 
   get diffResults(): DiffResult[] {
-    // return this.filterDiffResults(this._diffResults, this.hideTypes);
     return this._diffResults;
   }
 
   translateText(key: string, defaultValue: string, params?: any): string {
     if (this.translate.observers.length > 0) {
       this.translate.emit({key, params});
-      
       return defaultValue;
     }
     // If no translation function, return default text
@@ -57,40 +55,47 @@ export class TableJsonDiffViewerComponent {
   }
 
   private filterDiffResults(results: DiffResult[], hiddenTypes: string[]): DiffResult[] {
-    return results.filter(diff => {
-      return !hiddenTypes.includes(diff.type)
-    }).map(diff => {
-      if (diff.children) {
-        diff.children = this.filterDiffResults(diff.children, hiddenTypes);
-      }
-      return diff;
-    });
+    return results.filter(diff => !hiddenTypes.includes(diff.type))
+      .map(diff => {
+        if (diff.children) {
+          diff.children = this.filterDiffResults(diff.children, hiddenTypes);
+        }
+        return diff;
+      });
   }
 
-  private generateDiffResults(oldObj: any, newObj: any) {
+  private handleObjectCreation(newObj: any): DiffResult[] {
+    this.showOriginalColumn = false;
+    this.showModifiedColumn = true;
+    return Object.entries(newObj).map(([key, value]) => ({
+      path: key,
+      oldValue: undefined,
+      newValue: value,
+      type: 'added' as const
+    })).sort((a, b) => a.path.localeCompare(b.path));
+  }
+
+  private handleObjectDeletion(oldObj: any): DiffResult[] {
+    this.showOriginalColumn = true;
+    this.showModifiedColumn = false;
+    return Object.entries(oldObj).map(([key, value]) => ({
+      path: key,
+      oldValue: value,
+      newValue: undefined,
+      type: 'removed' as const
+    })).sort((a, b) => a.path.localeCompare(b.path));
+  }
+
+  private generateDiffResults(oldObj: any, newObj: any): void {
     // Handle complete object creation
     if (!oldObj && newObj) {
-      this.showOriginalColumn = false;
-      this.showModifiedColumn = true;
-      this.diffResults = Object.entries(newObj).map(([key, value]) => ({
-        path: key,
-        oldValue: undefined,
-        newValue: value,
-        type: 'added' as const
-      })).sort((a, b) => a.path.localeCompare(b.path));
+      this.diffResults = this.handleObjectCreation(newObj);
       return;
     }
 
     // Handle complete object deletion
     if (oldObj && !newObj) {
-      this.showOriginalColumn = true;
-      this.showModifiedColumn = false;
-      this.diffResults = Object.entries(oldObj).map(([key, value]) => ({
-        path: key,
-        oldValue: value,
-        newValue: undefined,
-        type: 'removed' as const
-      })).sort((a, b) => a.path.localeCompare(b.path));
+      this.diffResults = this.handleObjectDeletion(oldObj);
       return;
     }
 
@@ -106,27 +111,9 @@ export class TableJsonDiffViewerComponent {
     });
     const delta = diffpatcher.diff(oldObj, newObj);
 
-
-    const cleanedDelta = delta
-    this.diffResults = this.buildDiffTree(cleanedDelta, oldObj, newObj);
+    this.diffResults = this.buildDiffTree(delta, oldObj, newObj);
   }
 
-  replaceUnderscoreKeys = (obj: any): any => {
-    if (Array.isArray(obj)) {
-      return obj.map(this.replaceUnderscoreKeys);
-    } else if (obj && typeof obj === 'object') {
-      return Object.entries(obj).reduce((acc, [key, value]) => {
-        const newKey = key.replace(/_/g, '');
-        acc[newKey] = this.replaceUnderscoreKeys(value);
-        return acc;
-      }, {} as any);
-    }
-    return obj;
-  };
-
-  /**
-   * Processes a single diff key and pushes the result to the results array.
-   */
   private processDiffKey(
     key: string,
     delta: any,
@@ -134,7 +121,7 @@ export class TableJsonDiffViewerComponent {
     newObj: any,
     path: string,
     results: DiffResult[]
-  ) {
+  ): void {
     const currentPath = path ? `${path}.${key}` : key;
     const change = delta[key] ?? delta["_" + key];
     const oldValue = oldObj ? oldObj[key] : undefined;
@@ -213,44 +200,40 @@ export class TableJsonDiffViewerComponent {
     return results;
   }
 
-  ngOnChanges() {
+  ngOnChanges(): void {
+    let oldObj = null;
+    let newObj = null;
+
     try {
-      let oldObj = null;
-      let newObj = null;
-
-      try {
-        oldObj = this.oldJson ? JSON.parse(this.oldJson) : null;
-      } catch (e) {
-        console.warn('Invalid old JSON:', e);
-      }
-
-      try {
-        newObj = this.newJson ? JSON.parse(this.newJson) : null;
-      } catch (e) {
-        console.warn('Invalid new JSON:', e);
-      }
-
-      this.generateDiffResults(oldObj, newObj);
-      // Auto-expand logic based on flag
-      this.expandedRows.clear();
-      if (this.autoExpand === 'all') {
-        this.diffResults.forEach((diff, i) => {
-          if (this.isExpandable(diff)) {
-            this.expandedRows.add(i);
-          }
-        });
-      } else if (this.autoExpand === 'changed') {
-        this.diffResults.forEach((diff, i) => {
-          if (this.isExpandable(diff) && diff.type !== 'unchanged') {
-            this.expandedRows.add(i);
-          }
-        });
-      }
-      // 'none' does nothing (all collapsed)
+      oldObj = this.oldJson ? JSON.parse(this.oldJson) : null;
     } catch (e) {
-      console.error('Error generating diff:', e);
-      this.diffResults = [];
+      console.warn('Invalid old JSON:', e);
     }
+
+    try {
+      newObj = this.newJson ? JSON.parse(this.newJson) : null;
+    } catch (e) {
+      console.warn('Invalid new JSON:', e);
+    }
+
+    this.generateDiffResults(oldObj, newObj);
+
+    // Auto-expand logic based on flag
+    this.expandedRows.clear();
+    if (this.autoExpand === 'all') {
+      this.diffResults.forEach((diff, i) => {
+        if (this.isExpandable(diff)) {
+          this.expandedRows.add(i);
+        }
+      });
+    } else if (this.autoExpand === 'changed') {
+      this.diffResults.forEach((diff, i) => {
+        if (this.isExpandable(diff) && diff.type !== 'unchanged') {
+          this.expandedRows.add(i);
+        }
+      });
+    }
+    // 'none' does nothing (all collapsed)
   }
 
   private getValueByPath(obj: any, path: string): any {
@@ -267,7 +250,7 @@ export class TableJsonDiffViewerComponent {
     return val && typeof val === 'object' && (Array.isArray(val) ? val.length > 0 : Object.keys(val).length > 0);
   }
 
-  toggleExpand(index: number) {
+  toggleExpand(index: number): void {
     if (this.expandedRows.has(index)) {
       this.expandedRows.delete(index);
     } else {
@@ -287,4 +270,18 @@ export class TableJsonDiffViewerComponent {
       return null;
     }
   }
+
+  // Utility method to replace underscores in keys
+  replaceUnderscoreKeys = (obj: any): any => {
+    if (Array.isArray(obj)) {
+      return obj.map(this.replaceUnderscoreKeys);
+    } else if (obj && typeof obj === 'object') {
+      return Object.entries(obj).reduce((acc, [key, value]) => {
+        const newKey = key.replace(/_/g, '');
+        acc[newKey] = this.replaceUnderscoreKeys(value);
+        return acc;
+      }, {} as any);
+    }
+    return obj;
+  };
 }
