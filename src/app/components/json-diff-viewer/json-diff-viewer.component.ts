@@ -21,6 +21,7 @@ export class JsonDiffViewerComponent implements OnChanges {
     return obj && typeof obj === 'object' ? obj.id || JSON.stringify(obj) : obj;
   };
 
+
   oldJsonLines: LineInfo[] = [];
   newJsonLines: LineInfo[] = [];
 

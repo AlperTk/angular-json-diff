@@ -42,6 +42,31 @@ export class DiffTreeBuilderService {
   }
 
   private buildDiffTree(delta: any, oldObj: any, newObj: any, path: string = ''): DiffResult[] {
+    // Detect type changes - if old and new have different types, mark entire structures as removed/added
+    if (oldObj !== undefined && newObj !== undefined &&
+        (typeof oldObj !== typeof newObj ||
+         (Array.isArray(oldObj) && !Array.isArray(newObj)) ||
+         (!Array.isArray(oldObj) && Array.isArray(newObj)))) {
+      const results: DiffResult[] = [];
+      if (oldObj !== undefined) {
+        results.push({
+          path: path || 'root',
+          oldValue: oldObj,
+          newValue: undefined,
+          type: 'removed'
+        });
+      }
+      if (newObj !== undefined) {
+        results.push({
+          path: path || 'root',
+          oldValue: undefined,
+          newValue: newObj,
+          type: 'added'
+        });
+      }
+      return results;
+    }
+
     if (Array.isArray(oldObj) || Array.isArray(newObj)) {
       const oldArr = Array.isArray(oldObj) ? oldObj : [];
       const newArr = Array.isArray(newObj) ? newObj : [];
@@ -121,12 +146,41 @@ export class DiffTreeBuilderService {
   }
 
   private buildArrayDiffTree(delta: any, oldArr: any[], newArr: any[], path: string = ''): DiffResult[] {
+    // Detect type changes - if one is array and other is not, mark entire structures as removed/added
+    if ((Array.isArray(oldArr) && !Array.isArray(newArr)) ||
+        (!Array.isArray(oldArr) && Array.isArray(newArr))) {
+      const results: DiffResult[] = [];
+      if (Array.isArray(oldArr) && oldArr.length > 0) {
+        results.push({
+          path: path || 'root',
+          oldValue: oldArr,
+          newValue: undefined,
+          type: 'removed'
+        });
+      }
+      if (Array.isArray(newArr) && newArr.length > 0) {
+        results.push({
+          path: path || 'root',
+          oldValue: undefined,
+          newValue: newArr,
+          type: 'added'
+        });
+      }
+      return results;
+    }
+
     const results: DiffResult[] = [];
     const usedNewIndices = new Set<number>();
 
     const arrayDelta = delta && delta._t === 'a' ? delta : null;
     const pureRemovals = new Set<number>();
     const replacements = new Set<number>();
+
+    const countRemovedBefore = (index: number): number => {
+      let removedBefore = 0;
+      pureRemovals.forEach(i => { if (i < index) removedBefore++; });
+      return removedBefore;
+    };
 
     if (arrayDelta) {
       Object.keys(arrayDelta).forEach(key => {
@@ -175,11 +229,27 @@ export class DiffTreeBuilderService {
       const deltaEntry = arrayDelta?.[String(index)];
       const isReplacement = replacements.has(index);
       const isPureRemoval = pureRemovals.has(index);
+      const isInsertionOnly = deltaEntry !== undefined && !isReplacement && !isPureRemoval;
 
       if (isReplacement) {
         const newValue = Array.isArray(deltaEntry)
           ? (deltaEntry.length > 0 ? deltaEntry[0] : (index < newArr.length ? newArr[index] : undefined))
           : (index < newArr.length ? newArr[index] : undefined);
+
+        // If we have object hash mismatch, this is a remove + add (identity changed), not a modification.
+        if (oldItem && newValue && typeof oldItem === 'object' && typeof newValue === 'object') {
+          const oldHash = this.objectHashFunction(oldItem);
+          const newHash = this.objectHashFunction(newValue);
+          if (oldHash !== newHash) {
+            results.push({
+              path: currentPath,
+              oldValue: oldItem,
+              newValue: undefined,
+              type: 'removed'
+            });
+            continue;
+          }
+        }
 
         if (index < newArr.length) {
           usedNewIndices.add(index);
@@ -252,7 +322,7 @@ export class DiffTreeBuilderService {
         continue;
       }
 
-      const removedBefore = Array.from(pureRemovals).filter(i => i < index).length;
+      const removedBefore = countRemovedBefore(index)
       const effectiveNewIndex = index - removedBefore;
 
       if (deltaEntry !== undefined && removedBefore > 0) {
@@ -271,7 +341,7 @@ export class DiffTreeBuilderService {
         }
       }
 
-      if (deltaEntry !== undefined) {
+      if (deltaEntry !== undefined && !isInsertionOnly) {
         const newValue = Array.isArray(deltaEntry)
           ? (deltaEntry.length > 0 ? deltaEntry[0] : (index < newArr.length ? newArr[index] : undefined))
           : (index < newArr.length ? newArr[index] : undefined);
@@ -307,7 +377,12 @@ export class DiffTreeBuilderService {
       }
 
       let newIndex: number | undefined;
-      if (effectiveNewIndex >= 0 && effectiveNewIndex < newArr.length && !usedNewIndices.has(effectiveNewIndex)) {
+
+      if (oldItem && typeof oldItem === 'object') {
+        newIndex = takeHashMatchIndex(oldItem);
+      }
+
+      if (newIndex === undefined && effectiveNewIndex >= 0 && effectiveNewIndex < newArr.length && !usedNewIndices.has(effectiveNewIndex)) {
         newIndex = effectiveNewIndex;
       }
 

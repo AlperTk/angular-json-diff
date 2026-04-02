@@ -27,6 +27,86 @@ describe('TableJsonDiffViewerComponent', () => {
     expect(component.diffResults).toEqual([]);
   });
 
+  it('should detect value to null as modification', () => {
+    component.oldJson = '{"key": "value"}';
+    component.newJson = '{"key": null}';
+    component.ngOnChanges();
+
+    expect(component.diffResults.find(r => r.path === 'key')?.type).toBe('modified');
+  });
+
+  it('should treat empty objects as unchanged', () => {
+    component.oldJson = '{}';
+    component.newJson = '{}';
+    component.ngOnChanges();
+
+    expect(component.diffResults).toEqual([]);
+  });
+
+  it('should treat empty arrays as unchanged', () => {
+    component.oldJson = '[]';
+    component.newJson = '[]';
+    component.ngOnChanges();
+
+    expect(component.diffResults).toEqual([]);
+  });
+
+  it('should detect boolean changes', () => {
+    component.oldJson = '{"flag": true}';
+    component.newJson = '{"flag": false}';
+    component.ngOnChanges();
+
+    expect(component.diffResults.find(r => r.path === 'flag')?.type).toBe('modified');
+  });
+
+  it('should support custom object hash function for array diff', () => {
+    component.objectHashFunction = obj => obj && obj.id !== undefined ? obj.id : JSON.stringify(obj);
+    component.oldJson = '[{"id":1,"name":"A"}, {"id":2,"name":"B"}]';
+    component.newJson = '[{"id":1,"name":"A"}, {"id":2,"name":"B-new"}]';
+    component.ngOnChanges();
+
+    const item = component.diffResults.find(r => r.path === '1');
+    expect(item?.type).toBe('modified');
+  });
+
+  it('should re-compute after invalid then valid JSON', () => {
+    component.oldJson = 'invalid';
+    component.newJson = '{"x":1}';
+    component.ngOnChanges();
+    expect(component.diffResults).toEqual([]);
+
+    component.oldJson = '{"x":1}';
+    component.newJson = '{"x":2}';
+    component.ngOnChanges();
+    expect(component.diffResults.find(r => r.path === 'x')?.type).toBe('modified');
+  });
+
+  it('should handle unicode keys and values', () => {
+    component.oldJson = '{"🔑": "🚪"}';
+    component.newJson = '{"🔑": "🔓"}';
+    component.ngOnChanges();
+
+    expect(component.diffResults.find(r => r.path === '🔑')?.type).toBe('modified');
+  });
+
+  it('should handle keys with literal dots', () => {
+    component.oldJson = '{"a.b": 1}';
+    component.newJson = '{"a.b": 2}';
+    component.ngOnChanges();
+
+    expect(component.diffResults.find(r => r.path === 'a.b')?.type).toBe('modified');
+  });
+
+  it('should handle array reorder duplicates', () => {
+    component.oldJson = '{"arr": [1, 1, 2]}';
+    component.newJson = '{"arr": [2, 1, 1]}';
+    component.ngOnChanges();
+
+    const arrDiff = component.diffResults.find(r => r.path === 'arr');
+    expect(arrDiff).toBeDefined();
+    expect(arrDiff?.children?.some(child => child.type !== 'unchanged')).toBe(true);
+  });
+
   it('should handle invalid JSON inputs', () => {
     component.oldJson = 'invalid json';
     component.newJson = '{invalid json}';
@@ -284,6 +364,49 @@ describe('TableJsonDiffViewerComponent', () => {
     expect(thirdItem.type).toBe('unchanged');
     expect(thirdItem.oldValue).toEqual({id: 3});
     expect(thirdItem.newValue).toEqual({id: 3});
+  });
+
+  it('should treat object-hash-mismatched array item as removed + added', () => {
+    component.oldJson = '[{"id": 1, "name": "Item One", "value": 100}, {"id": 2, "name": "Item Two", "value": 200}, {"id": 3, "name": "Item Three", "value": 300}]';
+    component.newJson = '[{"id": 0, "name": "Item One", "value": 100}, {"id": 2, "name": "Item Two", "value": 200}, {"id": 3, "name": "Item Three", "value": 300}]';
+    component.ngOnChanges();
+
+    expect(component.diffResults.find(r => r.oldValue && (r.oldValue as any).id === 1 && r.type === 'removed')).toBeDefined();
+    expect(component.diffResults.find(r => r.newValue && (r.newValue as any).id === 0 && r.type === 'added')).toBeDefined();
+  });
+
+  it('should keep id mappings for complex object-shift array with hash identities', () => {
+    component.oldJson = '{"items":[{"id":1,"name":"Item One","value":100},{"id":2,"name":"Item Two","value":200},{"id":3,"name":"Item Three","value":300},{"id":4,"name":"Item Four","value":400},{"id":5,"name":"Item Five","value":500}],"metadata":{"version":"1.0","timestamp":"2026-03-30T12:00:00Z"}}';
+    component.newJson = '{"items":[{"id":1,"name":"Item One","value":100},{"id":3,"name":"Item Three","value":350},{"id":4,"name":"Item Four","value":400},{"id":6,"name":"Item Six","value":600},{"id":7,"name":"Item Seven","value":700}],"metadata":{"version":"1.1","timestamp":"2026-03-30T14:00:00Z"}}';
+    component.ngOnChanges();
+
+    const itemsDiff = component.diffResults.find(r => r.path === 'items');
+    expect(itemsDiff).toBeDefined();
+    expect(Array.isArray(itemsDiff?.children)).toBe(true);
+
+    // Check that removed items are detected (id:2 and id:5)
+    const removedItems = itemsDiff?.children?.filter(r => r.type === 'removed') || [];
+    expect(removedItems.length).toBeGreaterThanOrEqual(2);
+    expect(removedItems.some(r => (r.oldValue as any)?.id === 2)).toBe(true);
+    expect(removedItems.some(r => (r.oldValue as any)?.id === 5)).toBe(true);
+
+    // Check that added items are detected (id:6 and id:7)  
+    const addedItems = itemsDiff?.children?.filter(r => r.type === 'added') || [];
+    expect(addedItems.length).toBeGreaterThanOrEqual(2);
+    expect(addedItems.some(r => (r.newValue as any)?.id === 6)).toBe(true);
+    expect(addedItems.some(r => (r.newValue as any)?.id === 7)).toBe(true);
+
+    // Check that changes were detected in items
+    const changedItems = itemsDiff?.children?.filter(r => 
+      r.type === 'modified' || 
+      (r.oldValue && (r.oldValue as any).value !== (r.newValue as any)?.value)
+    ) || [];
+    expect(changedItems.length).toBeGreaterThan(0);
+
+    // metadata is changed as normal
+    expect(component.diffResults.find(r => r.path === 'metadata')?.children?.find(c => c.path==='metadata.version')).toEqual({
+      path:'metadata.version', oldValue:'1.0', newValue:'1.1', type:'modified'
+    });
   });
 
   it('should handle auto-expand functionality', () => {

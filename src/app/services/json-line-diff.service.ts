@@ -29,24 +29,43 @@ export class JsonLineDiffService {
   }
 
   buildLinesForJson(oldObj: any, newObj: any, objectHashFunction: (obj: any) => any): { oldJsonLines: LineInfo[]; newJsonLines: LineInfo[] } {
+    // Clear memoization to avoid stale state across multiple JSON diffs in long-living components.
+    this.memoizedIndentLevel.clear();
+
+    const splitLines = (formatted: string) => formatted.replace(/\r\n/g, '\n').split('\n');
+
     if (!oldObj && newObj) {
       const newFormatted = JSON.stringify(this.sortObject(newObj), null, 2);
       return {
         oldJsonLines: [],
-        newJsonLines: newFormatted.split('\n').map(line => ({ content: line, changed: true, type: 'added' }))
+        newJsonLines: splitLines(newFormatted).map(line => ({ content: line, changed: true, type: 'added' }))
       };
     }
 
     if (oldObj && !newObj) {
       const oldFormatted = JSON.stringify(this.sortObject(oldObj), null, 2);
       return {
-        oldJsonLines: oldFormatted.split('\n').map(line => ({ content: line, changed: true, type: 'removed' })),
+        oldJsonLines: splitLines(oldFormatted).map(line => ({ content: line, changed: true, type: 'removed' })),
         newJsonLines: []
       };
     }
 
     if (!oldObj || !newObj) {
       return { oldJsonLines: [], newJsonLines: [] };
+    }
+
+    // Detect type changes - if old and new have different types, mark all lines as changed
+    const hasTypeChange = (Array.isArray(oldObj) && !Array.isArray(newObj)) ||
+                         (!Array.isArray(oldObj) && Array.isArray(newObj)) ||
+                         (typeof oldObj !== typeof newObj && typeof oldObj === 'object' && typeof newObj === 'object');
+
+    if (hasTypeChange) {
+      const oldFormatted = JSON.stringify(this.sortObject(oldObj), null, 2);
+      const newFormatted = JSON.stringify(this.sortObject(newObj), null, 2);
+      return {
+        oldJsonLines: splitLines(oldFormatted).map(line => ({ content: line, changed: true, type: 'removed' })),
+        newJsonLines: splitLines(newFormatted).map(line => ({ content: line, changed: true, type: 'added' }))
+      };
     }
 
     const sortedOld = this.sortObject(oldObj);
@@ -155,6 +174,14 @@ export class JsonLineDiffService {
   }
 
   findLineWithKey(lines: LineInfo[], key: string): number {
+    // Exact key match (literal keys that may contain dots) should take precedence.
+    const directKey = `"${key}":`;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].content.trim().includes(directKey)) {
+        return i;
+      }
+    }
+
     const parts = key.split('.');
     let currentPart = parts[parts.length - 1];
 
