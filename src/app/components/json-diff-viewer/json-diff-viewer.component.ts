@@ -17,6 +17,9 @@ interface DiffDelta {
 export class JsonDiffViewerComponent implements OnChanges {
   @Input() oldJson: string | null = '';
   @Input() newJson: string | null = '';
+  @Input() objectHashFunction: ((obj: any) => any) = function (obj) {
+    return obj.id || JSON.stringify(obj);
+  };
 
   oldJsonLines: { content: string; changed?: boolean; type?: string }[] = [];
   newJsonLines: { content: string; changed?: boolean; type?: string }[] = [];
@@ -87,6 +90,8 @@ export class JsonDiffViewerComponent implements OnChanges {
 
       // Use custom diffpatcher to detect array order changes
       const diffpatcher = jsondiffpatch.create({
+        //@ts-ignore
+         objectHash: this.objectHashFunction,
         arrays: {
           detectMove: false // treat order changes as modifications
         }
